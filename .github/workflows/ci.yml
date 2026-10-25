@@ -29,12 +29,12 @@ jobs:
       - name: Install pinned tools
         run: |
           rustup toolchain install "$(python3 -c 'import tomllib; print(tomllib.load(open("rust-toolchain.toml", "rb"))["toolchain"]["channel"])')" --profile minimal --component rustfmt --component clippy
-          python3 -m venv .venv
-          .venv/bin/python -m pip install --disable-pip-version-check -r requirements-ci.txt
+          python3 -m venv "$RUNNER_TEMP/connector-python"
+          "$RUNNER_TEMP/connector-python/bin/python" -m pip install --disable-pip-version-check -r requirements-ci.txt
       - name: Check dependencies and wire fixtures
         run: |
           python3 check.py
-          .venv/bin/python -m unittest discover -s nebula-connector-sdk/tests -v
+          "$RUNNER_TEMP/connector-python/bin/python" -m unittest discover -s nebula-connector-sdk/tests -v
       - name: Check Rust
         run: |
           cargo fmt --all --check
