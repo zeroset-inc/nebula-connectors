@@ -1,5 +1,8 @@
 # Security
 
+During preview, security fixes are published in new releases; older versions
+receive no backports.
+
 Report vulnerabilities privately through
 [GitHub vulnerability reporting](https://github.com/zeroset-inc/nebula-connectors/security/advisories/new).
 
