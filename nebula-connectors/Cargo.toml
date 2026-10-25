@@ -1,0 +1,32 @@
+[package]
+name = "nebula-connectors"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Nebula provider adapters and isolated control runtime"
+
+[dependencies]
+nebula-connector-sdk.workspace = true
+axum.workspace = true
+base64.workspace = true
+hmac.workspace = true
+jsonwebtoken.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+zeroize.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+reqwest.workspace = true
+
+[[bin]]
+name = "nebula-connector-control"
+path = "src/bin/control.rs"
+
+[[bin]]
+name = "nebula-connector"
+path = "src/bin/runner.rs"

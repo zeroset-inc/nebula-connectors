@@ -1,0 +1,605 @@
+[
+  {
+    "name": "or_between_containers",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ]
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "b"
+    },
+    "selection": "selected",
+    "reason": "in_scope"
+  },
+  {
+    "name": "missing_container",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ]
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {},
+    "selection": "error",
+    "reason": "missing_metadata"
+  },
+  {
+    "name": "outside_container_stops_before_missing_type",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "content_types": [
+        "text/plain"
+      ]
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "elsewhere"
+    },
+    "selection": "excluded",
+    "reason": "filtered"
+  },
+  {
+    "name": "missing_required_type",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "content_types": [
+        "text/plain"
+      ]
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a"
+    },
+    "selection": "error",
+    "reason": "missing_metadata"
+  },
+  {
+    "name": "and_between_fields",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "content_types": [
+        "text/plain",
+        "application/pdf"
+      ]
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "b",
+      "content_type": "image/png"
+    },
+    "selection": "excluded",
+    "reason": "filtered"
+  },
+  {
+    "name": "or_between_types",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "content_types": [
+        "text/plain",
+        "application/pdf"
+      ]
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "b",
+      "content_type": "application/pdf"
+    },
+    "selection": "selected",
+    "reason": "in_scope"
+  },
+  {
+    "name": "lower_inclusive",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 10,
+        "to_ms": 20
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a",
+      "modified_at_ms": 10
+    },
+    "selection": "selected",
+    "reason": "in_scope"
+  },
+  {
+    "name": "upper_exclusive",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 10,
+        "to_ms": 20
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a",
+      "modified_at_ms": 20
+    },
+    "selection": "excluded",
+    "reason": "filtered"
+  },
+  {
+    "name": "missing_required_time",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 10,
+        "to_ms": 20
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a"
+    },
+    "selection": "error",
+    "reason": "missing_metadata"
+  },
+  {
+    "name": "created_range_can_recur",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "created": {
+        "from_ms": 10,
+        "to_ms": 20
+      }
+    },
+    "recurring": true,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a",
+      "created_at_ms": 19
+    },
+    "selection": "selected",
+    "reason": "in_scope"
+  },
+  {
+    "name": "created_exclusion_precedes_missing_modified",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 10,
+        "to_ms": 20
+      },
+      "created": {
+        "from_ms": 10
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a",
+      "created_at_ms": 9
+    },
+    "selection": "excluded",
+    "reason": "filtered"
+  },
+  {
+    "name": "recurring_modified_upper_bound",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 10,
+        "to_ms": 20
+      }
+    },
+    "recurring": true,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "recurring_modified_lower_bound",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 10
+      }
+    },
+    "recurring": true,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a",
+      "modified_at_ms": 10
+    },
+    "selection": "selected",
+    "reason": "in_scope"
+  },
+  {
+    "name": "unsupported_filter",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 10,
+        "to_ms": 20
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container"
+    ],
+    "valid": false
+  },
+  {
+    "name": "unsupported_container",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ]
+    },
+    "recurring": false,
+    "supported": [],
+    "valid": false
+  },
+  {
+    "name": "no_containers",
+    "scope": {
+      "containers": []
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "duplicate_container",
+    "scope": {
+      "containers": [
+        "a",
+        "a"
+      ]
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "duplicate_type",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "content_types": [
+        "text/plain",
+        "text/plain"
+      ]
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "empty_interval",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "created": {
+        "from_ms": 10,
+        "to_ms": 10
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "reversed_interval",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 20,
+        "to_ms": 10
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "negative_time",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "created": {
+        "from_ms": -1
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "fractional_time",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "created": {
+        "from_ms": 10.5
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "unsafe_integer",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "created": {
+        "from_ms": 9007199254740992
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "integral_forms",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "modified": {
+        "from_ms": 10.0,
+        "to_ms": 20.0
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a",
+      "modified_at_ms": 10
+    },
+    "selection": "selected",
+    "reason": "in_scope"
+  },
+  {
+    "name": "null_optional_filters",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "content_types": null,
+      "created": null,
+      "modified": {
+        "from_ms": null
+      }
+    },
+    "recurring": true,
+    "supported": [
+      "container"
+    ],
+    "valid": true,
+    "metadata": {
+      "container_id": "a"
+    },
+    "selection": "selected",
+    "reason": "in_scope"
+  },
+  {
+    "name": "unknown_filter",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "unsupported": true
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  },
+  {
+    "name": "unknown_time_bound",
+    "scope": {
+      "containers": [
+        "a",
+        "b"
+      ],
+      "created": {
+        "before_ms": 20
+      }
+    },
+    "recurring": false,
+    "supported": [
+      "container",
+      "content_type",
+      "created_at",
+      "modified_at"
+    ],
+    "valid": false
+  }
+]

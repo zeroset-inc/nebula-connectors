@@ -1,0 +1,900 @@
+[
+  {
+    "name": "slack deletion keeps exact message identity",
+    "provider": "slack",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "slack",
+        "signing_secret": "fixture-secret-not-a-real-provider-key",
+        "team_id": "T-A",
+        "app_id": "A-A"
+      },
+      "verifying": false,
+      "headers": {
+        "x-slack-request-timestamp": "1700000000",
+        "x-slack-signature": "v0=2df4f2f9394f15670e8a6a836ba6c1dd5cac9d4d36c3b364b01ae6f8a240c3e6"
+      },
+      "query": {},
+      "body_base64": "eyJ0eXBlIjoiZXZlbnRfY2FsbGJhY2siLCJ0ZWFtX2lkIjoiVC1BIiwiYXBpX2FwcF9pZCI6IkEtQSIsImV2ZW50X2lkIjoiRXYtQSIsImV2ZW50Ijp7InR5cGUiOiJtZXNzYWdlIiwic3VidHlwZSI6Im1lc3NhZ2VfZGVsZXRlZCIsImNoYW5uZWwiOiJDLUEiLCJkZWxldGVkX3RzIjoiMTcwMDAwMDAwMC4wMDAwMDMifX0="
+    },
+    "expected": {
+      "kind": "notifications",
+      "events": [
+        {
+          "event_id": "Ev-A",
+          "kind": "deleted",
+          "container_id": "C-A",
+          "object_id": "1700000000.000003"
+        }
+      ]
+    }
+  },
+  {
+    "name": "slack old signature fails",
+    "provider": "slack",
+    "now": 1700000301,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "slack",
+        "signing_secret": "fixture-secret-not-a-real-provider-key",
+        "team_id": "T-A",
+        "app_id": "A-A"
+      },
+      "verifying": false,
+      "headers": {
+        "x-slack-request-timestamp": "1700000000",
+        "x-slack-signature": "v0=2df4f2f9394f15670e8a6a836ba6c1dd5cac9d4d36c3b364b01ae6f8a240c3e6"
+      },
+      "query": {},
+      "body_base64": "eyJ0eXBlIjoiZXZlbnRfY2FsbGJhY2siLCJ0ZWFtX2lkIjoiVC1BIiwiYXBpX2FwcF9pZCI6IkEtQSIsImV2ZW50X2lkIjoiRXYtQSIsImV2ZW50Ijp7InR5cGUiOiJtZXNzYWdlIiwic3VidHlwZSI6Im1lc3NhZ2VfZGVsZXRlZCIsImNoYW5uZWwiOiJDLUEiLCJkZWxldGVkX3RzIjoiMTcwMDAwMDAwMC4wMDAwMDMifX0="
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "slack cross workspace fails",
+    "provider": "slack",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "slack",
+        "signing_secret": "fixture-secret-not-a-real-provider-key",
+        "team_id": "T-B",
+        "app_id": "A-A"
+      },
+      "verifying": false,
+      "headers": {
+        "x-slack-request-timestamp": "1700000000",
+        "x-slack-signature": "v0=2df4f2f9394f15670e8a6a836ba6c1dd5cac9d4d36c3b364b01ae6f8a240c3e6"
+      },
+      "query": {},
+      "body_base64": "eyJ0eXBlIjoiZXZlbnRfY2FsbGJhY2siLCJ0ZWFtX2lkIjoiVC1BIiwiYXBpX2FwcF9pZCI6IkEtQSIsImV2ZW50X2lkIjoiRXYtQSIsImV2ZW50Ijp7InR5cGUiOiJtZXNzYWdlIiwic3VidHlwZSI6Im1lc3NhZ2VfZGVsZXRlZCIsImNoYW5uZWwiOiJDLUEiLCJkZWxldGVkX3RzIjoiMTcwMDAwMDAwMC4wMDAwMDMifX0="
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "slack modified signed bytes fail",
+    "provider": "slack",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "slack",
+        "signing_secret": "fixture-secret-not-a-real-provider-key",
+        "team_id": "T-A",
+        "app_id": "A-A"
+      },
+      "verifying": false,
+      "headers": {
+        "x-slack-request-timestamp": "1700000000",
+        "x-slack-signature": "v0=2df4f2f9394f15670e8a6a836ba6c1dd5cac9d4d36c3b364b01ae6f8a240c3e6"
+      },
+      "query": {},
+      "body_base64": "eyJ0eXBlIjoiZXZlbnRfY2FsbGJhY2siLCJ0ZWFtX2lkIjoiVC1BIiwiYXBpX2FwcF9pZCI6IkEtQSIsImV2ZW50X2lkIjoiRXYtQSIsImV2ZW50Ijp7InR5cGUiOiJtZXNzYWdlIiwic3VidHlwZSI6Im1lc3NhZ2VfZGVsZXRlZCIsImNoYW5uZWwiOiJDLUEiLCJkZWxldGVkX3RzIjoiMTcwMDAwMDAwMC4wMDAwMDMifX0g"
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "slack setup challenge only",
+    "provider": "slack",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "slack",
+        "signing_secret": "fixture-secret-not-a-real-provider-key",
+        "team_id": "T-A",
+        "app_id": "A-A"
+      },
+      "verifying": true,
+      "headers": {
+        "x-slack-request-timestamp": "1700000000",
+        "x-slack-signature": "v0=5933a2177c9069f948e3bd42bae4b60ab5888365e0a84a99edd03bf780b7b972"
+      },
+      "query": {},
+      "body_base64": "eyJ0eXBlIjoidXJsX3ZlcmlmaWNhdGlvbiIsImNoYWxsZW5nZSI6ImNoYWxsZW5nZS1hIn0="
+    },
+    "expected": {
+      "kind": "challenge",
+      "value": "challenge-a"
+    }
+  },
+  {
+    "name": "notion authenticated page deletion",
+    "provider": "notion",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "notion",
+        "verification_token": "fixture-secret-not-a-real-provider-key",
+        "workspace_id": "workspace-a",
+        "subscription_id": "notion-sub",
+        "bot_id": "bot-a"
+      },
+      "verifying": false,
+      "headers": {
+        "x-notion-signature": "sha256=db3dc3b849fb8103afc4f333093a19e7a5eef875d3d86626e876b65e30d5f2a5"
+      },
+      "query": {},
+      "body_base64": "eyJpZCI6Im5vdGlvbi1ldmVudCIsInR5cGUiOiJwYWdlLmRlbGV0ZWQiLCJ3b3Jrc3BhY2VfaWQiOiJ3b3Jrc3BhY2UtYSIsInN1YnNjcmlwdGlvbl9pZCI6Im5vdGlvbi1zdWIiLCJhY2Nlc3NpYmxlX2J5IjpbeyJpZCI6ImJvdC1hIn1dLCJlbnRpdHkiOnsiaWQiOiJwYWdlLWEifX0="
+    },
+    "expected": {
+      "kind": "notifications",
+      "events": [
+        {
+          "event_id": "notion-event",
+          "kind": "deleted",
+          "container_id": "",
+          "object_id": "page-a"
+        }
+      ]
+    }
+  },
+  {
+    "name": "notion another subscription fails",
+    "provider": "notion",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "notion",
+        "verification_token": "fixture-secret-not-a-real-provider-key",
+        "workspace_id": "workspace-a",
+        "subscription_id": "other",
+        "bot_id": "bot-a"
+      },
+      "verifying": false,
+      "headers": {
+        "x-notion-signature": "sha256=db3dc3b849fb8103afc4f333093a19e7a5eef875d3d86626e876b65e30d5f2a5"
+      },
+      "query": {},
+      "body_base64": "eyJpZCI6Im5vdGlvbi1ldmVudCIsInR5cGUiOiJwYWdlLmRlbGV0ZWQiLCJ3b3Jrc3BhY2VfaWQiOiJ3b3Jrc3BhY2UtYSIsInN1YnNjcmlwdGlvbl9pZCI6Im5vdGlvbi1zdWIiLCJhY2Nlc3NpYmxlX2J5IjpbeyJpZCI6ImJvdC1hIn1dLCJlbnRpdHkiOnsiaWQiOiJwYWdlLWEifX0="
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "notion inaccessible bot ignored",
+    "provider": "notion",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "notion",
+        "verification_token": "fixture-secret-not-a-real-provider-key",
+        "workspace_id": "workspace-a",
+        "subscription_id": "notion-sub",
+        "bot_id": "other"
+      },
+      "verifying": false,
+      "headers": {
+        "x-notion-signature": "sha256=db3dc3b849fb8103afc4f333093a19e7a5eef875d3d86626e876b65e30d5f2a5"
+      },
+      "query": {},
+      "body_base64": "eyJpZCI6Im5vdGlvbi1ldmVudCIsInR5cGUiOiJwYWdlLmRlbGV0ZWQiLCJ3b3Jrc3BhY2VfaWQiOiJ3b3Jrc3BhY2UtYSIsInN1YnNjcmlwdGlvbl9pZCI6Im5vdGlvbi1zdWIiLCJhY2Nlc3NpYmxlX2J5IjpbeyJpZCI6ImJvdC1hIn1dLCJlbnRpdHkiOnsiaWQiOiJwYWdlLWEifX0="
+    },
+    "expected": {
+      "kind": "ignore"
+    }
+  },
+  {
+    "name": "drive hint binds channel and resource",
+    "provider": "google_drive",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "drive",
+        "channel_token": "fixture-secret-not-a-real-provider-key",
+        "channel_id": "channel-a",
+        "resource_id": "resource-a"
+      },
+      "verifying": false,
+      "headers": {
+        "x-goog-channel-token": "fixture-secret-not-a-real-provider-key",
+        "x-goog-channel-id": "channel-a",
+        "x-goog-resource-id": "resource-a",
+        "x-goog-message-number": "42",
+        "x-goog-resource-state": "change"
+      },
+      "query": {},
+      "body_base64": ""
+    },
+    "expected": {
+      "kind": "notifications",
+      "events": [
+        {
+          "event_id": "9dcf739a7eb56efb1624e0085b3f23625cc91a805fb91f869da7e4fe84eaf030",
+          "kind": "reconcile",
+          "container_id": "",
+          "object_id": ""
+        }
+      ]
+    }
+  },
+  {
+    "name": "drive another resource fails",
+    "provider": "google_drive",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "drive",
+        "channel_token": "fixture-secret-not-a-real-provider-key",
+        "channel_id": "channel-a",
+        "resource_id": "other"
+      },
+      "verifying": false,
+      "headers": {
+        "x-goog-channel-token": "fixture-secret-not-a-real-provider-key",
+        "x-goog-channel-id": "channel-a",
+        "x-goog-resource-id": "resource-a",
+        "x-goog-message-number": "42",
+        "x-goog-resource-state": "change"
+      },
+      "query": {},
+      "body_base64": ""
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "drive unknown future event ignored",
+    "provider": "google_drive",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "drive",
+        "channel_token": "fixture-secret-not-a-real-provider-key",
+        "channel_id": "channel-a",
+        "resource_id": "resource-a"
+      },
+      "verifying": false,
+      "headers": {
+        "x-goog-channel-token": "fixture-secret-not-a-real-provider-key",
+        "x-goog-channel-id": "channel-a",
+        "x-goog-resource-id": "resource-a",
+        "x-goog-message-number": "42",
+        "x-goog-resource-state": "future-event"
+      },
+      "query": {},
+      "body_base64": ""
+    },
+    "expected": {
+      "kind": "ignore"
+    }
+  },
+  {
+    "name": "teams verified deletion preserves resource",
+    "provider": "teams",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "graph",
+        "client_state": "fixture-secret-not-a-real-provider-key",
+        "subscription_id": "graph-sub",
+        "tenant_id": "graph-tenant"
+      },
+      "verifying": false,
+      "headers": {},
+      "query": {},
+      "body_base64": "eyJ2YWx1ZSI6W3sic3Vic2NyaXB0aW9uSWQiOiJncmFwaC1zdWIiLCJ0ZW5hbnRJZCI6ImdyYXBoLXRlbmFudCIsImNsaWVudFN0YXRlIjoiZml4dHVyZS1zZWNyZXQtbm90LWEtcmVhbC1wcm92aWRlci1rZXkiLCJjaGFuZ2VUeXBlIjoiZGVsZXRlZCIsInJlc291cmNlIjoiY2hhdHMvY2hhdC1hL21lc3NhZ2VzL21lc3NhZ2UtYSIsInJlc291cmNlRGF0YSI6eyJpZCI6Im1lc3NhZ2UtYSJ9fV19"
+    },
+    "expected": {
+      "kind": "notifications",
+      "events": [
+        {
+          "event_id": "2d2f6214282935cd8c26413065a5ffbd09a05ca8ac708d16a90df3967b6922e5",
+          "kind": "deleted",
+          "container_id": "chats/chat-a/messages/message-a",
+          "object_id": "message-a"
+        }
+      ]
+    }
+  },
+  {
+    "name": "graph wrong tenant fails",
+    "provider": "outlook",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "graph",
+        "client_state": "fixture-secret-not-a-real-provider-key",
+        "subscription_id": "graph-sub",
+        "tenant_id": "other"
+      },
+      "verifying": false,
+      "headers": {},
+      "query": {},
+      "body_base64": "eyJ2YWx1ZSI6W3sic3Vic2NyaXB0aW9uSWQiOiJncmFwaC1zdWIiLCJ0ZW5hbnRJZCI6ImdyYXBoLXRlbmFudCIsImNsaWVudFN0YXRlIjoiZml4dHVyZS1zZWNyZXQtbm90LWEtcmVhbC1wcm92aWRlci1rZXkiLCJjaGFuZ2VUeXBlIjoiZGVsZXRlZCIsInJlc291cmNlIjoiY2hhdHMvY2hhdC1hL21lc3NhZ2VzL21lc3NhZ2UtYSIsInJlc291cmNlRGF0YSI6eyJpZCI6Im1lc3NhZ2UtYSJ9fV19"
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "graph wrong client state fails",
+    "provider": "onedrive",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "graph",
+        "client_state": "a-different-customer-secret",
+        "subscription_id": "graph-sub",
+        "tenant_id": "graph-tenant"
+      },
+      "verifying": false,
+      "headers": {},
+      "query": {},
+      "body_base64": "eyJ2YWx1ZSI6W3sic3Vic2NyaXB0aW9uSWQiOiJncmFwaC1zdWIiLCJ0ZW5hbnRJZCI6ImdyYXBoLXRlbmFudCIsImNsaWVudFN0YXRlIjoiZml4dHVyZS1zZWNyZXQtbm90LWEtcmVhbC1wcm92aWRlci1rZXkiLCJjaGFuZ2VUeXBlIjoiZGVsZXRlZCIsInJlc291cmNlIjoiY2hhdHMvY2hhdC1hL21lc3NhZ2VzL21lc3NhZ2UtYSIsInJlc291cmNlRGF0YSI6eyJpZCI6Im1lc3NhZ2UtYSJ9fV19"
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "graph challenge setup",
+    "provider": "sharepoint",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "graph",
+        "client_state": "fixture-secret-not-a-real-provider-key",
+        "subscription_id": "graph-sub",
+        "tenant_id": "graph-tenant"
+      },
+      "verifying": true,
+      "headers": {},
+      "query": {
+        "validationToken": "challenge token"
+      },
+      "body_base64": ""
+    },
+    "expected": {
+      "kind": "challenge",
+      "value": "challenge token"
+    }
+  },
+  {
+    "name": "graph challenge active subscription fails",
+    "provider": "teams",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "graph",
+        "client_state": "fixture-secret-not-a-real-provider-key",
+        "subscription_id": "graph-sub",
+        "tenant_id": "graph-tenant"
+      },
+      "verifying": false,
+      "headers": {},
+      "query": {
+        "validationToken": "challenge token"
+      },
+      "body_base64": ""
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "gmail verified push identity",
+    "provider": "gmail",
+    "now": 1700000001,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "gmail",
+        "audience": "https://callbacks.example.test/gmail",
+        "email": "push@example-project.iam.gserviceaccount.com",
+        "mailbox": "user@example.test",
+        "subscription": "projects/test/subscriptions/gmail",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "RSA",
+              "kid": "test-rsa",
+              "alg": "RS256",
+              "use": "sig",
+              "n": "hZQQdgDekjkInEHvQ6vpeF_Y5Q7sQo2aeS-4XOuNcdkhczZKONw6RC7TdXfXP1UJDoVKuCxW_j7RjW33nlHOnIuWT3b2PaFOk1cbx8-su9T6YWQn_t4UGMd5K-Vicyu9e7lgyMVut5Y5tXs1emmvKVht3fec6UjQgE7ukB8RI7xLJtJbmErxEcqJpGAqcWwEuMH9pUz_uEU5Qy7OLkC4gGTTKmpfy7CFAp65-Ylb6KNta4ykSHSYOZDCAjZhg06BiDKphvsMeVh4Xh-WtWu7LdrMFUTksyO3krs_-lXDs2LNfvzYPQ4u5Yuq7VSG-FBr63jG_oTyvHPJ0N6ERb5ttw",
+              "e": "AQAB"
+            }
+          ]
+        }
+      },
+      "verifying": false,
+      "headers": {
+        "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QtcnNhIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2NhbGxiYWNrcy5leGFtcGxlLnRlc3QvZ21haWwiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwiZW1haWwiOiJwdXNoQGV4YW1wbGUtcHJvamVjdC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlfQ.cT1rQ9jneqJDyPwQhKtBsb_969zfQT4U1FX0ETGMWnPv2ITi2pijJHJsKUSDuYwVkYV-MZWyJv7fhiiWt_Pvq2w7SjvvEwh_lz3EgbR7kuCk0ZImrcNY7PKpL2g1_yIBJuPBokm-kjynagI34A_GRtiqHAQ8lGngNINvi9B_sJFKqi6-4FNX3H4U1z3lJOFeizFqtr31VK8dkRh8m-dZEbLznoYyBOiYeLdShZJBMB3UkPboQvWoPut0tXTW1midSAyYSHdry9FfZJrJFghJxpzMU7NSXcbWD9TylsKyzb7zTMxt08tek63rJ_QI2JkDKJkJna9nBBwBMPMW056bqQ"
+      },
+      "query": {},
+      "body_base64": "eyJzdWJzY3JpcHRpb24iOiJwcm9qZWN0cy90ZXN0L3N1YnNjcmlwdGlvbnMvZ21haWwiLCJtZXNzYWdlIjp7Im1lc3NhZ2VJZCI6Im1lc3NhZ2UtNDIiLCJkYXRhIjoiZXlKbGJXRnBiRUZrWkhKbGMzTWlPaUoxYzJWeVFHVjRZVzF3YkdVdWRHVnpkQ0lzSW1ocGMzUnZjbmxKWkNJNklqRXlNelExTmlKOSJ9fQ=="
+    },
+    "expected": {
+      "kind": "notifications",
+      "events": [
+        {
+          "event_id": "message-42",
+          "kind": "reconcile",
+          "container_id": "",
+          "object_id": ""
+        }
+      ]
+    }
+  },
+  {
+    "name": "gmail forged service account fails",
+    "provider": "gmail",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "gmail",
+        "audience": "https://callbacks.example.test/gmail",
+        "email": "push@example-project.iam.gserviceaccount.com",
+        "mailbox": "user@example.test",
+        "subscription": "projects/test/subscriptions/gmail",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "RSA",
+              "kid": "test-rsa",
+              "alg": "RS256",
+              "use": "sig",
+              "n": "hZQQdgDekjkInEHvQ6vpeF_Y5Q7sQo2aeS-4XOuNcdkhczZKONw6RC7TdXfXP1UJDoVKuCxW_j7RjW33nlHOnIuWT3b2PaFOk1cbx8-su9T6YWQn_t4UGMd5K-Vicyu9e7lgyMVut5Y5tXs1emmvKVht3fec6UjQgE7ukB8RI7xLJtJbmErxEcqJpGAqcWwEuMH9pUz_uEU5Qy7OLkC4gGTTKmpfy7CFAp65-Ylb6KNta4ykSHSYOZDCAjZhg06BiDKphvsMeVh4Xh-WtWu7LdrMFUTksyO3krs_-lXDs2LNfvzYPQ4u5Yuq7VSG-FBr63jG_oTyvHPJ0N6ERb5ttw",
+              "e": "AQAB"
+            }
+          ]
+        }
+      },
+      "verifying": false,
+      "headers": {
+        "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QtcnNhIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2NhbGxiYWNrcy5leGFtcGxlLnRlc3QvZ21haWwiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwiZW1haWwiOiJvdGhlckBleGFtcGxlLnRlc3QiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZX0.RXHODGQYFRCV0maxR9HJ-Jp3A5kDzZbZQtPsjUjEVDI6dNfEz2SrcEom0ZIgR9SG3kAkbI-T3qyIs66qQmUdF7vih28l0HPVUlJgk1aBiY8cUSYd0R6fGiANbJksm6w01Rz5JXswc6v6kDplN_NBzpEtR6w-8oCSYMfbUjYc3nEmkiyEZrX52zXEI8dK51MKLuJuGSshaN17U7d0izXfZrDUX9qrZxubLpTTAtoazlXRrysDTktJkD3lNfNkcuwKrZJf9q-ZmLPa4K3nVRauZ_aa4yU_kidWSQdpJRSedA1QjEzq0GAU-NJ0yYmnwZFN4InjXhNcIFMs85NgWAGenw"
+      },
+      "query": {},
+      "body_base64": "eyJzdWJzY3JpcHRpb24iOiJwcm9qZWN0cy90ZXN0L3N1YnNjcmlwdGlvbnMvZ21haWwiLCJtZXNzYWdlIjp7Im1lc3NhZ2VJZCI6Im1lc3NhZ2UtNDIiLCJkYXRhIjoiZXlKbGJXRnBiRUZrWkhKbGMzTWlPaUoxYzJWeVFHVjRZVzF3YkdVdWRHVnpkQ0lzSW1ocGMzUnZjbmxKWkNJNklqRXlNelExTmlKOSJ9fQ=="
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "gmail unverified email fails",
+    "provider": "gmail",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "gmail",
+        "audience": "https://callbacks.example.test/gmail",
+        "email": "push@example-project.iam.gserviceaccount.com",
+        "mailbox": "user@example.test",
+        "subscription": "projects/test/subscriptions/gmail",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "RSA",
+              "kid": "test-rsa",
+              "alg": "RS256",
+              "use": "sig",
+              "n": "hZQQdgDekjkInEHvQ6vpeF_Y5Q7sQo2aeS-4XOuNcdkhczZKONw6RC7TdXfXP1UJDoVKuCxW_j7RjW33nlHOnIuWT3b2PaFOk1cbx8-su9T6YWQn_t4UGMd5K-Vicyu9e7lgyMVut5Y5tXs1emmvKVht3fec6UjQgE7ukB8RI7xLJtJbmErxEcqJpGAqcWwEuMH9pUz_uEU5Qy7OLkC4gGTTKmpfy7CFAp65-Ylb6KNta4ykSHSYOZDCAjZhg06BiDKphvsMeVh4Xh-WtWu7LdrMFUTksyO3krs_-lXDs2LNfvzYPQ4u5Yuq7VSG-FBr63jG_oTyvHPJ0N6ERb5ttw",
+              "e": "AQAB"
+            }
+          ]
+        }
+      },
+      "verifying": false,
+      "headers": {
+        "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QtcnNhIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2NhbGxiYWNrcy5leGFtcGxlLnRlc3QvZ21haWwiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwiZW1haWwiOiJwdXNoQGV4YW1wbGUtcHJvamVjdC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZX0.FjaaLDCDH6aijNMuleZcV6nZy1GQUn24qWzh-8kZpewApt6uXdv8KUCCZLU8kazY5XPxO7Iq5CaQ86DBsrORTyRdsY3GBGcvwmaaXbx7yeWHv3r9tqmU86o7APfRDoXmDdNBawuT5Ylr-hL8a0JqsXfu9SyWFG1c_EmTL4v1KQbt6ep2iY15SnXrWC5U4aGCOAMfMkNLTIf3nO_YJ8hdRkSmQUu4u8F9Tw9OeQYAeMfg2N_kZsirsvGVz_NCFcpbv-aSX3gG4HMAhqQ60iihWbIsQnmtxGs9HlzF6UM6OLG0VDI3TFz-85ZHoP6QpNJGG-Xh2O7LDgjana0SHZYkyg"
+      },
+      "query": {},
+      "body_base64": "eyJzdWJzY3JpcHRpb24iOiJwcm9qZWN0cy90ZXN0L3N1YnNjcmlwdGlvbnMvZ21haWwiLCJtZXNzYWdlIjp7Im1lc3NhZ2VJZCI6Im1lc3NhZ2UtNDIiLCJkYXRhIjoiZXlKbGJXRnBiRUZrWkhKbGMzTWlPaUoxYzJWeVFHVjRZVzF3YkdVdWRHVnpkQ0lzSW1ocGMzUnZjbmxKWkNJNklqRXlNelExTmlKOSJ9fQ=="
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "gmail wrong mailbox fails",
+    "provider": "gmail",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "gmail",
+        "audience": "https://callbacks.example.test/gmail",
+        "email": "push@example-project.iam.gserviceaccount.com",
+        "mailbox": "other@example.test",
+        "subscription": "projects/test/subscriptions/gmail",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "RSA",
+              "kid": "test-rsa",
+              "alg": "RS256",
+              "use": "sig",
+              "n": "hZQQdgDekjkInEHvQ6vpeF_Y5Q7sQo2aeS-4XOuNcdkhczZKONw6RC7TdXfXP1UJDoVKuCxW_j7RjW33nlHOnIuWT3b2PaFOk1cbx8-su9T6YWQn_t4UGMd5K-Vicyu9e7lgyMVut5Y5tXs1emmvKVht3fec6UjQgE7ukB8RI7xLJtJbmErxEcqJpGAqcWwEuMH9pUz_uEU5Qy7OLkC4gGTTKmpfy7CFAp65-Ylb6KNta4ykSHSYOZDCAjZhg06BiDKphvsMeVh4Xh-WtWu7LdrMFUTksyO3krs_-lXDs2LNfvzYPQ4u5Yuq7VSG-FBr63jG_oTyvHPJ0N6ERb5ttw",
+              "e": "AQAB"
+            }
+          ]
+        }
+      },
+      "verifying": false,
+      "headers": {
+        "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QtcnNhIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2NhbGxiYWNrcy5leGFtcGxlLnRlc3QvZ21haWwiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwiZW1haWwiOiJwdXNoQGV4YW1wbGUtcHJvamVjdC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlfQ.cT1rQ9jneqJDyPwQhKtBsb_969zfQT4U1FX0ETGMWnPv2ITi2pijJHJsKUSDuYwVkYV-MZWyJv7fhiiWt_Pvq2w7SjvvEwh_lz3EgbR7kuCk0ZImrcNY7PKpL2g1_yIBJuPBokm-kjynagI34A_GRtiqHAQ8lGngNINvi9B_sJFKqi6-4FNX3H4U1z3lJOFeizFqtr31VK8dkRh8m-dZEbLznoYyBOiYeLdShZJBMB3UkPboQvWoPut0tXTW1midSAyYSHdry9FfZJrJFghJxpzMU7NSXcbWD9TylsKyzb7zTMxt08tek63rJ_QI2JkDKJkJna9nBBwBMPMW056bqQ"
+      },
+      "query": {},
+      "body_base64": "eyJzdWJzY3JpcHRpb24iOiJwcm9qZWN0cy90ZXN0L3N1YnNjcmlwdGlvbnMvZ21haWwiLCJtZXNzYWdlIjp7Im1lc3NhZ2VJZCI6Im1lc3NhZ2UtNDIiLCJkYXRhIjoiZXlKbGJXRnBiRUZrWkhKbGMzTWlPaUoxYzJWeVFHVjRZVzF3YkdVdWRHVnpkQ0lzSW1ocGMzUnZjbmxKWkNJNklqRXlNelExTmlKOSJ9fQ=="
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "gmail expired jwt fails",
+    "provider": "gmail",
+    "now": 1700000032,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "gmail",
+        "audience": "https://callbacks.example.test/gmail",
+        "email": "push@example-project.iam.gserviceaccount.com",
+        "mailbox": "user@example.test",
+        "subscription": "projects/test/subscriptions/gmail",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "RSA",
+              "kid": "test-rsa",
+              "alg": "RS256",
+              "use": "sig",
+              "n": "hZQQdgDekjkInEHvQ6vpeF_Y5Q7sQo2aeS-4XOuNcdkhczZKONw6RC7TdXfXP1UJDoVKuCxW_j7RjW33nlHOnIuWT3b2PaFOk1cbx8-su9T6YWQn_t4UGMd5K-Vicyu9e7lgyMVut5Y5tXs1emmvKVht3fec6UjQgE7ukB8RI7xLJtJbmErxEcqJpGAqcWwEuMH9pUz_uEU5Qy7OLkC4gGTTKmpfy7CFAp65-Ylb6KNta4ykSHSYOZDCAjZhg06BiDKphvsMeVh4Xh-WtWu7LdrMFUTksyO3krs_-lXDs2LNfvzYPQ4u5Yuq7VSG-FBr63jG_oTyvHPJ0N6ERb5ttw",
+              "e": "AQAB"
+            }
+          ]
+        }
+      },
+      "verifying": false,
+      "headers": {
+        "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QtcnNhIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2NhbGxiYWNrcy5leGFtcGxlLnRlc3QvZ21haWwiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MTcwMDAwMDAwMSwiZW1haWwiOiJwdXNoQGV4YW1wbGUtcHJvamVjdC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlfQ.BzomgAiyzzv69I24llgZNU5Wak0xKyO52opDxmWLb7cMG2CH-eRw1eV0D6XOYf3GgA_s5IqCejwcaTJj2Qysqj2B53vRx4wYfOvsICcINeZm7necM3pav2lf9v3nzQf-5BBZMvKeJEkV9O___uwtc9PeRkdsadUDj8tIeFcZ9gOEB36gp_sixuZEVj1ET703kPzvqqAQArNTGg4kTWBO-mn-QS-UzugyPBCNo8qDl13cNo6YWjBhdmqGNc8-dv_ttqzc3mJzuVq8QkkqLznpt-RXQaktsyJWN0U5XdaHxM7adgQH85C6EeI_rux6OkaVLSzjvHXZaHx7OjfSGW_hfQ"
+      },
+      "query": {},
+      "body_base64": "eyJzdWJzY3JpcHRpb24iOiJwcm9qZWN0cy90ZXN0L3N1YnNjcmlwdGlvbnMvZ21haWwiLCJtZXNzYWdlIjp7Im1lc3NhZ2VJZCI6Im1lc3NhZ2UtNDIiLCJkYXRhIjoiZXlKbGJXRnBiRUZrWkhKbGMzTWlPaUoxYzJWeVFHVjRZVzF3YkdVdWRHVnpkQ0lzSW1ocGMzUnZjbmxKWkNJNklqRXlNelExTmlKOSJ9fQ=="
+    },
+    "error": "callback_not_verified"
+  },
+  {
+    "name": "notion database.moved retains scope evidence",
+    "provider": "notion",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "notion",
+        "verification_token": "fixture-secret-not-a-real-provider-key",
+        "workspace_id": "workspace-a",
+        "subscription_id": "notion-sub",
+        "bot_id": "bot-a"
+      },
+      "verifying": false,
+      "headers": {
+        "x-notion-signature": "sha256=3a21bd19927c7f8c95f16f73d50d9ed66579e1ade7914591170f51cbceff1d54"
+      },
+      "query": {},
+      "body_base64": "eyJpZCI6Im5vdGlvbi1ldmVudCIsInR5cGUiOiJkYXRhYmFzZS5tb3ZlZCIsIndvcmtzcGFjZV9pZCI6IndvcmtzcGFjZS1hIiwic3Vic2NyaXB0aW9uX2lkIjoibm90aW9uLXN1YiIsImFjY2Vzc2libGVfYnkiOlt7ImlkIjoiYm90LWEifV0sImVudGl0eSI6eyJpZCI6InBhZ2UtYSJ9fQ=="
+    },
+    "expected": {
+      "kind": "notifications",
+      "events": [
+        {
+          "event_id": "notion-event",
+          "kind": "changed",
+          "container_id": "",
+          "object_id": "page-a"
+        }
+      ]
+    }
+  },
+  {
+    "name": "notion data_source.moved retains scope evidence",
+    "provider": "notion",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "notion",
+        "verification_token": "fixture-secret-not-a-real-provider-key",
+        "workspace_id": "workspace-a",
+        "subscription_id": "notion-sub",
+        "bot_id": "bot-a"
+      },
+      "verifying": false,
+      "headers": {
+        "x-notion-signature": "sha256=2d3a972becf0a7da4eabff724e168492d51e2311254ac456eda8e8f5e6bc2253"
+      },
+      "query": {},
+      "body_base64": "eyJpZCI6Im5vdGlvbi1ldmVudCIsInR5cGUiOiJkYXRhX3NvdXJjZS5tb3ZlZCIsIndvcmtzcGFjZV9pZCI6IndvcmtzcGFjZS1hIiwic3Vic2NyaXB0aW9uX2lkIjoibm90aW9uLXN1YiIsImFjY2Vzc2libGVfYnkiOlt7ImlkIjoiYm90LWEifV0sImVudGl0eSI6eyJpZCI6InBhZ2UtYSJ9fQ=="
+    },
+    "expected": {
+      "kind": "notifications",
+      "events": [
+        {
+          "event_id": "notion-event",
+          "kind": "changed",
+          "container_id": "",
+          "object_id": "page-a"
+        }
+      ]
+    }
+  },
+  {
+    "name": "slack shared channel uses installation authority",
+    "provider": "slack",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "slack",
+        "signing_secret": "fixture-secret-not-a-real-provider-key",
+        "team_id": "T-A",
+        "app_id": "A-A"
+      },
+      "verifying": false,
+      "headers": {
+        "x-slack-request-timestamp": "1700000000",
+        "x-slack-signature": "v0=6745da6d17cfc35d476cb64b953b278f4c934997ab3c3fc07fa4080953b1b050"
+      },
+      "query": {},
+      "body_base64": "eyJ0eXBlIjoiZXZlbnRfY2FsbGJhY2siLCJ0ZWFtX2lkIjoiZXh0ZXJuYWwtdGVhbSIsImFwaV9hcHBfaWQiOiJBLUEiLCJldmVudF9pZCI6IkV2LUEiLCJldmVudCI6eyJ0eXBlIjoibWVzc2FnZSIsInN1YnR5cGUiOiJtZXNzYWdlX2RlbGV0ZWQiLCJjaGFubmVsIjoiQy1BIiwiZGVsZXRlZF90cyI6IjE3MDAwMDAwMDAuMDAwMDAzIn0sImF1dGhvcml6YXRpb25zIjpbeyJ0ZWFtX2lkIjoiVC1BIiwiaXNfZW50ZXJwcmlzZV9pbnN0YWxsIjpmYWxzZX1dfQ=="
+    },
+    "expected": {
+      "kind": "notifications",
+      "events": [
+        {
+          "event_id": "Ev-A",
+          "kind": "deleted",
+          "container_id": "C-A",
+          "object_id": "1700000000.000003"
+        }
+      ]
+    }
+  },
+  {
+    "name": "slack shared channel rejects other installation",
+    "provider": "slack",
+    "now": 1700000000,
+    "request": {
+      "context": {
+        "version": 1,
+        "attempt_id": "attempt-a",
+        "tenant_id": "tenant-a",
+        "connection_id": "connection-a",
+        "subscription_id": "subscription-a",
+        "scope_revision": 3,
+        "credential_revision": 4
+      },
+      "verification": {
+        "kind": "slack",
+        "signing_secret": "fixture-secret-not-a-real-provider-key",
+        "team_id": "external-team",
+        "app_id": "A-A"
+      },
+      "verifying": false,
+      "headers": {
+        "x-slack-request-timestamp": "1700000000",
+        "x-slack-signature": "v0=6745da6d17cfc35d476cb64b953b278f4c934997ab3c3fc07fa4080953b1b050"
+      },
+      "query": {},
+      "body_base64": "eyJ0eXBlIjoiZXZlbnRfY2FsbGJhY2siLCJ0ZWFtX2lkIjoiZXh0ZXJuYWwtdGVhbSIsImFwaV9hcHBfaWQiOiJBLUEiLCJldmVudF9pZCI6IkV2LUEiLCJldmVudCI6eyJ0eXBlIjoibWVzc2FnZSIsInN1YnR5cGUiOiJtZXNzYWdlX2RlbGV0ZWQiLCJjaGFubmVsIjoiQy1BIiwiZGVsZXRlZF90cyI6IjE3MDAwMDAwMDAuMDAwMDAzIn0sImF1dGhvcml6YXRpb25zIjpbeyJ0ZWFtX2lkIjoiVC1BIiwiaXNfZW50ZXJwcmlzZV9pbnN0YWxsIjpmYWxzZX1dfQ=="
+    },
+    "error": "callback_not_verified"
+  }
+]

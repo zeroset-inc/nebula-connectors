@@ -1,0 +1,47 @@
+[
+  {
+    "name": "private_number_cannot_replace_cursor_object",
+    "wire": "{\"protocol_version\":1,\"batch_id\":\"batch\",\"fence\":1,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{\"nested\":{\"$serde_json::private::Number\":\"1\"}}}]}",
+    "valid": false
+  },
+  {
+    "name": "private_raw_value_cannot_inject_unchecked_json",
+    "wire": "{\"protocol_version\":1,\"batch_id\":\"batch\",\"fence\":1,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{\"nested\":{\"$serde_json::private::RawValue\":\"{\\\"duplicate\\\":1,\\\"duplicate\\\":2}\"}}}]}",
+    "valid": false
+  },
+  {
+    "name": "duplicate_cursor_field",
+    "wire": "{\"protocol_version\":1,\"batch_id\":\"batch\",\"fence\":1,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{\"x\":1,\"x\":2}}]}",
+    "valid": false
+  },
+  {
+    "name": "malformed_unicode_cursor",
+    "wire": "{\"protocol_version\":1,\"batch_id\":\"batch\",\"fence\":1,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{\"x\":\"\\ud800\"}}]}",
+    "valid": false
+  },
+  {
+    "name": "large_opaque_number",
+    "wire": "{\"protocol_version\":1,\"batch_id\":\"batch\",\"fence\":1,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{\"id\":9007199254740993,\"large\":1e1000}}]}",
+    "valid": true
+  },
+  {
+    "name": "exponent_bound",
+    "wire": "{\"protocol_version\":1,\"batch_id\":\"batch\",\"fence\":1,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{\"value\":1e1025}}]}",
+    "valid": false
+  },
+  {
+    "name": "integral_decimal_forms",
+    "wire": "{\"protocol_version\":1.0,\"batch_id\":\"batch\",\"fence\":9.007199254740991e15,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{}}]}",
+    "valid": true
+  },
+  {
+    "name": "fractional_fence",
+    "wire": "{\"protocol_version\":1,\"batch_id\":\"batch\",\"fence\":1.0000000000000001,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{}}]}",
+    "valid": false
+  },
+  {
+    "name": "nul_cannot_enter_postgres_json",
+    "wire": "{\"protocol_version\":1,\"batch_id\":\"batch\",\"fence\":1,\"sequence\":0,\"events\":[{\"type\":\"checkpoint\",\"cursor\":{\"value\":\"\\u0000\"}}]}",
+    "valid": false
+  }
+]

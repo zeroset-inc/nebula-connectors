@@ -1,0 +1,816 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:nebula:connectors:v1:batch",
+  "title": "Batch",
+  "description": "Connector wire protocol v1. Transport limits and ordering are enforced in addition to this schema.",
+  "$ref": "#/definitions/Batch",
+  "definitions": {
+    "Source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "object_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 8192
+        }
+      },
+      "required": [
+        "authority",
+        "object_id",
+        "revision"
+      ]
+    },
+    "Principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "user",
+            "group",
+            "domain",
+            "public"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "authority",
+        "kind",
+        "id"
+      ]
+    },
+    "KnownPermissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "known"
+          ]
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "allow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Principal"
+          },
+          "maxItems": 1024
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Principal"
+          },
+          "maxItems": 1024
+        }
+      },
+      "required": [
+        "state",
+        "revision",
+        "observed_at_ms",
+        "allow",
+        "deny"
+      ]
+    },
+    "Permissions": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "unavailable"
+              ]
+            }
+          },
+          "required": [
+            "state"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "unknown"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "fetch_failed",
+                "unsupported",
+                "stale",
+                "identity_unresolved"
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "reason"
+          ]
+        },
+        {
+          "$ref": "#/definitions/KnownPermissions"
+        }
+      ]
+    },
+    "Metadata": {
+      "description": "Flat searchable metadata. Runtime validation must additionally enforce UTF-8 limits of 64 bytes per key, 1024 bytes per string and 32768 serialized bytes total; JSON Schema maxLength counts characters.",
+      "type": "object",
+      "maxProperties": 64,
+      "propertyNames": {
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ],
+        "maxLength": 1024
+      }
+    },
+    "TextContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "text"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 1000000
+        },
+        "media_type": {
+          "type": "string",
+          "enum": [
+            "text/plain",
+            "text/markdown",
+            "text/html"
+          ]
+        },
+        "representation_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "kind",
+        "text",
+        "media_type",
+        "representation_version"
+      ]
+    },
+    "StructuredContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "structured"
+          ]
+        },
+        "value": {
+          "type": "object"
+        },
+        "media_type": {
+          "type": "string",
+          "enum": [
+            "application/json"
+          ]
+        },
+        "representation_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "kind",
+        "value",
+        "media_type",
+        "representation_version"
+      ]
+    },
+    "FileContent": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/OriginalFile"
+        },
+        {
+          "$ref": "#/definitions/ExportFile"
+        }
+      ]
+    },
+    "Upsert": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "upsert"
+          ]
+        },
+        "change_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source": {
+          "$ref": "#/definitions/Source"
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "content": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/TextContent"
+            },
+            {
+              "$ref": "#/definitions/StructuredContent"
+            },
+            {
+              "$ref": "#/definitions/FileContent"
+            }
+          ]
+        },
+        "permissions": {
+          "$ref": "#/definitions/Permissions"
+        },
+        "metadata": {
+          "$ref": "#/definitions/Metadata"
+        },
+        "observation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "type",
+        "change_id",
+        "source",
+        "observed_at_ms",
+        "content",
+        "permissions",
+        "metadata",
+        "observation_id"
+      ]
+    },
+    "PermissionChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "permissions"
+          ]
+        },
+        "change_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source": {
+          "$ref": "#/definitions/Source"
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "permissions": {
+          "$ref": "#/definitions/Permissions"
+        }
+      },
+      "required": [
+        "type",
+        "change_id",
+        "source",
+        "observed_at_ms",
+        "permissions"
+      ]
+    },
+    "Withdraw": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "withdraw"
+          ]
+        },
+        "change_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source": {
+          "$ref": "#/definitions/Source"
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "evidence": {
+          "type": "string",
+          "enum": [
+            "source_deleted",
+            "provider_trash",
+            "access_lost",
+            "scope_filter_exit"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "change_id",
+        "source",
+        "observed_at_ms",
+        "evidence"
+      ]
+    },
+    "Presence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "presence"
+          ]
+        },
+        "change_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source": {
+          "$ref": "#/definitions/Source"
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "observation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "type",
+        "change_id",
+        "source",
+        "observed_at_ms",
+        "observation_id"
+      ]
+    },
+    "Checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "checkpoint"
+          ]
+        },
+        "cursor": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "cursor"
+      ]
+    },
+    "SnapshotComplete": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "snapshot_complete"
+          ]
+        },
+        "scan_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "scope_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "type",
+        "scan_id",
+        "scope_revision"
+      ]
+    },
+    "ConnectorEvent": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/Upsert"
+        },
+        {
+          "$ref": "#/definitions/PermissionChange"
+        },
+        {
+          "$ref": "#/definitions/Withdraw"
+        },
+        {
+          "$ref": "#/definitions/Presence"
+        },
+        {
+          "$ref": "#/definitions/Checkpoint"
+        },
+        {
+          "$ref": "#/definitions/SnapshotComplete"
+        },
+        {
+          "$ref": "#/definitions/ItemObserved"
+        }
+      ]
+    },
+    "Batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": {
+          "type": "integer",
+          "enum": [
+            1
+          ]
+        },
+        "batch_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "fence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ConnectorEvent"
+          },
+          "maxItems": 100,
+          "minItems": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "protocol_version",
+        "batch_id",
+        "fence",
+        "events",
+        "sequence"
+      ]
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "invalid_request",
+            "unsupported_version",
+            "unauthorized",
+            "stale_fence",
+            "conflict",
+            "backpressure",
+            "retryable",
+            "resync_required"
+          ]
+        },
+        "field": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "retry_after_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400
+        }
+      },
+      "required": [
+        "code"
+      ]
+    },
+    "OriginalFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "file"
+          ]
+        },
+        "upload_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "representation": {
+          "type": "string",
+          "enum": [
+            "original"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "upload_id",
+        "sha256",
+        "byte_length",
+        "filename",
+        "media_type",
+        "representation"
+      ],
+      "title": "OriginalFile"
+    },
+    "ExportFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "file"
+          ]
+        },
+        "upload_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "representation": {
+          "type": "string",
+          "enum": [
+            "export"
+          ]
+        },
+        "export_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "kind",
+        "upload_id",
+        "sha256",
+        "byte_length",
+        "filename",
+        "media_type",
+        "representation",
+        "export_revision"
+      ],
+      "title": "ExportFile"
+    },
+    "ItemMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "container_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 8192
+        },
+        "content_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "created_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "modified_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "ItemObserved": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "item_observed"
+          ]
+        },
+        "observation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "scan_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source": {
+          "$ref": "#/definitions/Source"
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "metadata": {
+          "$ref": "#/definitions/ItemMetadata"
+        },
+        "selection": {
+          "type": "string",
+          "enum": [
+            "selected",
+            "excluded",
+            "error"
+          ]
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "observed",
+            "fetched",
+            "skipped",
+            "failed"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "in_scope",
+            "filtered",
+            "missing_metadata",
+            "unsupported",
+            "access_denied",
+            "unavailable",
+            "empty",
+            "fetch_failed",
+            "revision_changed"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "type",
+        "observation_id",
+        "scan_id",
+        "source",
+        "observed_at_ms",
+        "metadata",
+        "selection",
+        "outcome",
+        "reason"
+      ]
+    },
+    "ProtocolLimits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_batch_events",
+        "max_batch_bytes",
+        "max_cursor_bytes"
+      ],
+      "properties": {
+        "max_batch_events": {
+          "type": "integer",
+          "const": 100
+        },
+        "max_batch_bytes": {
+          "type": "integer",
+          "const": 1048576
+        },
+        "max_cursor_bytes": {
+          "type": "integer",
+          "const": 65536
+        }
+      }
+    }
+  }
+}

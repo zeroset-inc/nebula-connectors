@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release source
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          python3 - <<'PY'
+          import os, tomllib
+          version = tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"]
+          assert os.environ["GITHUB_REF_NAME"] == "v" + version, "tag must match workspace version"
+          PY
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: binaries-*
+          path: dist
+          merge-multiple: true
+      - name: Assemble release
+        run: |
+          git archive --format=tar --prefix=nebula-connectors/ "$GITHUB_SHA" | gzip -n > dist/nebula-connectors-source.tar.gz
+          printf '%s\n' "$GITHUB_SHA" > dist/SOURCE_COMMIT
+          cd dist
+          sha256sum -- *.tar.gz SOURCE_COMMIT > SHA256SUMS
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: dist/SHA256SUMS
+      - name: Publish immutable prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --draft --prerelease --title "$GITHUB_REF_NAME — connector foundations" --notes "Foundation preview: protocol, Rust SDK, Slack inventory runner and callback verification runtime. Provider activation, complete ingestion and remaining provider ports are not included. See README for scope and artifact verification."
+          gh release edit "$GITHUB_REF_NAME" --draft=false

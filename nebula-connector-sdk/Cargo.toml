@@ -1,0 +1,22 @@
+[package]
+name = "nebula-connector-sdk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Validated Nebula connector contract and managed runner transport"
+
+[dependencies]
+async-trait.workspace = true
+jsonschema.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[build-dependencies]
+serde_json.workspace = true
+typify.workspace = true

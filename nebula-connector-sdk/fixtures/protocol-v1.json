@@ -1,0 +1,1507 @@
+[
+  {
+    "name": "original_file_with_checkpoint",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "known_empty_policy_is_representable",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "known",
+            "revision": "policy-1",
+            "observed_at_ms": 1792555200000,
+            "allow": [],
+            "deny": []
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "unresolved_policy_is_explicit",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unknown",
+            "reason": "identity_unresolved"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "export_requires_revision",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "export",
+            "export_revision": "export-r1"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "structured_page_retains_representation",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "structured",
+            "media_type": "application/json",
+            "representation_version": "notion-page-v1",
+            "value": {
+              "page": {
+                "id": "page-1"
+              },
+              "blocks": []
+            }
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "withdraw_event",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "withdraw",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "evidence": "source_deleted"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "presence_event",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "presence",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "permissions_event",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "permissions",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "permissions": {
+            "state": "unavailable"
+          }
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "complete_snapshot_is_scope_bound",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "snapshot_complete",
+          "scan_id": "scan-1",
+          "scope_revision": 2
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "unsupported_protocol",
+    "valid": false,
+    "instance": {
+      "protocol_version": 2,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "zero_fence",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 0,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "empty_batch",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "tenant_cannot_be_selected_by_batch",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "tenant_id": "other-tenant",
+      "sequence": 0
+    }
+  },
+  {
+    "name": "destination_cannot_be_selected_by_event",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "collection_id": "other-collection",
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "permission_omission_is_not_public",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "unknown_is_not_unavailable",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unknown"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "known_policy_requires_deny_set",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "known",
+            "revision": "policy-1",
+            "observed_at_ms": 1792555200000,
+            "allow": []
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "principal_requires_authority",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "known",
+            "revision": "policy-1",
+            "observed_at_ms": 1792555200000,
+            "allow": [
+              {
+                "id": "reader",
+                "kind": "user"
+              }
+            ],
+            "deny": []
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "files_reference_uploads_not_provider_urls",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original",
+            "url": "https://provider.test/private"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "file_digest_must_be_sha256",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "unknown",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "file_length_cannot_be_negative",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": -1,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "export_cannot_omit_revision",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "export"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "Original PDF",
+            "page_count": 3
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "metadata_is_scalar",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "nested": {
+              "secret": "value"
+            }
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "withdrawal_requires_evidence",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "withdraw",
+          "change_id": "withdraw-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "partial_scan_cannot_claim_snapshot_absence",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "withdraw",
+          "change_id": "withdraw-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "evidence": "snapshot_absent"
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "snapshot_cannot_omit_scope_revision",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "snapshot_complete",
+          "scan_id": "scan-1"
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "metadata_empty_object",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {},
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "metadata_ascii_limits_and_scalars",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv",
+            "empty": "",
+            "count": 0,
+            "active": false,
+            "ratio": 0.5
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "metadata_rejects_null",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": null
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "metadata_rejects_65_ascii_byte_key",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk": "value"
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "metadata_rejects_1025_ascii_byte_string",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "batch-1",
+      "fence": 1,
+      "events": [
+        {
+          "type": "upsert",
+          "change_id": "change-1",
+          "source": {
+            "authority": "example/account-1",
+            "object_id": "document-1",
+            "revision": "revision-1",
+            "url": "https://example.com/document-1"
+          },
+          "observed_at_ms": 1792555200000,
+          "content": {
+            "kind": "file",
+            "upload_id": "upload-1",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_length": 4096,
+            "filename": "original.pdf",
+            "media_type": "application/pdf",
+            "representation": "original"
+          },
+          "permissions": {
+            "state": "unavailable"
+          },
+          "metadata": {
+            "title": "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+          },
+          "observation_id": "observation-1"
+        },
+        {
+          "type": "checkpoint",
+          "cursor": {
+            "page": "next"
+          }
+        }
+      ],
+      "sequence": 0
+    }
+  },
+  {
+    "name": "observed_item_with_digest",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": 0,
+      "events": [
+        {
+          "type": "item_observed",
+          "observation_id": "observation-1",
+          "scan_id": "scan-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {
+            "container_id": "folder",
+            "path": "/docs/a.pdf",
+            "content_type": "application/pdf",
+            "created_at_ms": 1,
+            "modified_at_ms": 2,
+            "byte_length": 7
+          },
+          "selection": "selected",
+          "outcome": "fetched",
+          "reason": "in_scope",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    }
+  },
+  {
+    "name": "observed_item_missing_metadata",
+    "valid": true,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": 0,
+      "events": [
+        {
+          "type": "item_observed",
+          "observation_id": "observation-1",
+          "scan_id": "scan-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {},
+          "selection": "error",
+          "outcome": "failed",
+          "reason": "missing_metadata"
+        }
+      ]
+    }
+  },
+  {
+    "name": "observation_missing_observation_id",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": 0,
+      "events": [
+        {
+          "type": "item_observed",
+          "scan_id": "scan-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {},
+          "selection": "error",
+          "outcome": "failed",
+          "reason": "missing_metadata"
+        }
+      ]
+    }
+  },
+  {
+    "name": "observation_missing_scan_id",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": 0,
+      "events": [
+        {
+          "type": "item_observed",
+          "observation_id": "observation-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {},
+          "selection": "error",
+          "outcome": "failed",
+          "reason": "missing_metadata"
+        }
+      ]
+    }
+  },
+  {
+    "name": "observation_missing_selection",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": 0,
+      "events": [
+        {
+          "type": "item_observed",
+          "observation_id": "observation-1",
+          "scan_id": "scan-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {},
+          "outcome": "failed",
+          "reason": "missing_metadata"
+        }
+      ]
+    }
+  },
+  {
+    "name": "observation_missing_outcome",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": 0,
+      "events": [
+        {
+          "type": "item_observed",
+          "observation_id": "observation-1",
+          "scan_id": "scan-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {},
+          "selection": "error",
+          "reason": "missing_metadata"
+        }
+      ]
+    }
+  },
+  {
+    "name": "observation_missing_reason",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": 0,
+      "events": [
+        {
+          "type": "item_observed",
+          "observation_id": "observation-1",
+          "scan_id": "scan-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {},
+          "selection": "error",
+          "outcome": "failed"
+        }
+      ]
+    }
+  },
+  {
+    "name": "observation_invalid_digest",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": 0,
+      "events": [
+        {
+          "type": "item_observed",
+          "observation_id": "observation-1",
+          "scan_id": "scan-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {},
+          "selection": "error",
+          "outcome": "failed",
+          "reason": "missing_metadata",
+          "sha256": "url-secret"
+        }
+      ]
+    }
+  },
+  {
+    "name": "negative_batch_sequence",
+    "valid": false,
+    "instance": {
+      "protocol_version": 1,
+      "batch_id": "audit",
+      "fence": 1,
+      "sequence": -1,
+      "events": [
+        {
+          "type": "item_observed",
+          "observation_id": "observation-1",
+          "scan_id": "scan-1",
+          "source": {
+            "authority": "test",
+            "object_id": "object",
+            "revision": "r1"
+          },
+          "observed_at_ms": 1,
+          "metadata": {},
+          "selection": "error",
+          "outcome": "failed",
+          "reason": "missing_metadata"
+        }
+      ]
+    }
+  }
+]

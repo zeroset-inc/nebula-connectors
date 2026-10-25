@@ -1,0 +1,186 @@
+{
+  "version": 1,
+  "provider": "slack",
+  "revision": "slack-inventory-v1",
+  "operations": [
+    {
+      "id": "auth.test",
+      "caller": "runner",
+      "method": "POST",
+      "host": "slack.com",
+      "path": "/api/auth.test",
+      "arguments": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "query": {},
+      "credential": "bearer",
+      "max_response_bytes": 65536,
+      "timeout_seconds": 30,
+      "quotas": [
+        {
+          "namespace": "slack",
+          "scope": "account",
+          "name": "auth.test",
+          "cost": 1,
+          "capacity": 20,
+          "window_seconds": 60,
+          "concurrency": 2
+        }
+      ]
+    },
+    {
+      "id": "conversations.info",
+      "caller": "runner",
+      "method": "GET",
+      "host": "slack.com",
+      "path": "/api/conversations.info",
+      "arguments": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "pattern": "^[CG][A-Za-z0-9]{1,63}$"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "additionalProperties": false
+      },
+      "query": {
+        "channel": "channel"
+      },
+      "credential": "bearer",
+      "max_response_bytes": 65536,
+      "timeout_seconds": 30,
+      "quotas": [
+        {
+          "namespace": "slack",
+          "scope": "account",
+          "name": "conversations.info",
+          "cost": 1,
+          "capacity": 20,
+          "window_seconds": 60,
+          "concurrency": 2
+        }
+      ],
+      "container_argument": "channel",
+      "resource_arguments": [
+        "channel"
+      ]
+    },
+    {
+      "id": "conversations.history",
+      "caller": "runner",
+      "method": "GET",
+      "host": "slack.com",
+      "path": "/api/conversations.history",
+      "arguments": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "pattern": "^[CG][A-Za-z0-9]{1,63}$"
+          },
+          "limit": {
+            "const": "15"
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "channel",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "query": {
+        "channel": "channel",
+        "limit": "limit",
+        "cursor": "cursor"
+      },
+      "credential": "bearer",
+      "max_response_bytes": 2097152,
+      "timeout_seconds": 30,
+      "quotas": [
+        {
+          "namespace": "slack",
+          "scope": "account",
+          "name": "conversations.history",
+          "cost": 1,
+          "capacity": 1,
+          "window_seconds": 60,
+          "concurrency": 1
+        }
+      ],
+      "container_argument": "channel",
+      "resource_arguments": [
+        "channel"
+      ]
+    },
+    {
+      "id": "conversations.replies",
+      "caller": "runner",
+      "method": "GET",
+      "host": "slack.com",
+      "path": "/api/conversations.replies",
+      "arguments": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "pattern": "^[CG][A-Za-z0-9]{1,63}$"
+          },
+          "limit": {
+            "const": "15"
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "ts": {
+            "type": "string",
+            "pattern": "^[0-9]{1,10}\\.[0-9]{6}$"
+          }
+        },
+        "required": [
+          "channel",
+          "limit",
+          "ts"
+        ],
+        "additionalProperties": false
+      },
+      "query": {
+        "channel": "channel",
+        "limit": "limit",
+        "cursor": "cursor",
+        "ts": "ts"
+      },
+      "credential": "bearer",
+      "max_response_bytes": 2097152,
+      "timeout_seconds": 30,
+      "quotas": [
+        {
+          "namespace": "slack",
+          "scope": "account",
+          "name": "conversations.replies",
+          "cost": 1,
+          "capacity": 1,
+          "window_seconds": 60,
+          "concurrency": 1
+        }
+      ],
+      "container_argument": "channel",
+      "resource_arguments": [
+        "channel"
+      ]
+    }
+  ]
+}
