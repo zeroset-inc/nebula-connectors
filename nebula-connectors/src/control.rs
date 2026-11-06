@@ -38,6 +38,7 @@ pub struct Runtime(Arc<Inner>);
 struct Inner {
     tokens: Vec<Zeroizing<String>>,
     callbacks: BTreeMap<Provider, workers::Pool>,
+    oauth: Arc<tokio::sync::Semaphore>,
 }
 
 impl Runtime {
@@ -63,6 +64,7 @@ impl Runtime {
         }
         Ok(Self(Arc::new(Inner {
             tokens: credentials.tokens.into_iter().map(Zeroizing::new).collect(),
+            oauth: Arc::new(tokio::sync::Semaphore::new(workers::CAPACITY)),
             callbacks: Provider::ALL
                 .into_iter()
                 .map(|p| workers::Pool::new(p, processor.clone()).map(|pool| (p, pool)))
@@ -81,13 +83,77 @@ impl Runtime {
                 "/v1/providers/{provider}/webhook/verify",
                 post(verify_callback),
             )
+            .route("/v1/providers/{provider}/oauth", post(oauth_operation))
             .with_state(self.clone())
     }
 
     pub fn drain(&self) {
+        self.0.oauth.close();
         for permits in self.0.callbacks.values() {
             permits.close();
         }
+    }
+}
+
+async fn oauth_operation(
+    State(runtime): State<Runtime>,
+    Path(provider): Path<String>,
+    request: Request,
+) -> Response {
+    let supplied = request
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "));
+    if request
+        .headers()
+        .get_all(header::AUTHORIZATION)
+        .iter()
+        .count()
+        != 1
+        || !supplied.is_some_and(|s| {
+            s.len() <= 512
+                && runtime
+                    .0
+                    .tokens
+                    .iter()
+                    .any(|expected| webhook::secret_equal(expected, s))
+        })
+    {
+        return error(StatusCode::UNAUTHORIZED, "workload_not_authorized");
+    }
+    if request
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|s| s.to_str().ok())
+        != Some("application/json")
+    {
+        return error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "json_required");
+    }
+    let Ok(_permit) = runtime.0.oauth.clone().try_acquire_owned() else {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "oauth_capacity");
+    };
+    let result = tokio::time::timeout(CALLBACK_DEADLINE, async {
+        let bytes = to_bytes(request.into_body(), 512 << 10)
+            .await
+            .map_err(|_| "oauth_limit")?;
+        let bytes = Zeroizing::new(bytes.to_vec());
+        let input: crate::oauth::Request =
+            decode_control(&bytes, 512 << 10).map_err(|_| "invalid_oauth_request")?;
+        crate::oauth::process(&provider, input)
+    })
+    .await;
+    match result {
+        Ok(Ok(result)) => {
+            let mut response = axum::Json(result).into_response();
+            response.headers_mut().insert(
+                header::CACHE_CONTROL,
+                header::HeaderValue::from_static("no-store"),
+            );
+            closed_connection(response)
+        }
+        Ok(Err(code)) => error(StatusCode::BAD_REQUEST, code),
+        Err(_) => error(StatusCode::SERVICE_UNAVAILABLE, "oauth_deadline"),
     }
 }
 

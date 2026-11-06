@@ -1,0 +1,320 @@
+{
+ "version": 1,
+ "provider": "google_drive",
+ "revision": "google-drive-inventory-v1",
+ "operations": [
+  {
+   "id": "about.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "www.googleapis.com",
+   "path": "/drive/v3/about",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "fields": {
+      "const": "user(permissionId)"
+     }
+    },
+    "required": [
+     "fields"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "fields": "fields"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "google_drive",
+     "scope": "account",
+     "name": "queries",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "files.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "www.googleapis.com",
+   "path": "/drive/v3/files/{folder}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "folder": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,256}$"
+     },
+     "fields": {
+      "const": "id,name,mimeType"
+     },
+     "supportsAllDrives": {
+      "const": "true"
+     }
+    },
+    "required": [
+     "folder",
+     "fields",
+     "supportsAllDrives"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "fields": "fields",
+    "supportsAllDrives": "supportsAllDrives"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "google_drive",
+     "scope": "account",
+     "name": "queries",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_argument": "folder",
+   "resource_arguments": [
+    "folder"
+   ]
+  },
+  {
+   "id": "files.list",
+   "caller": "runner",
+   "method": "GET",
+   "host": "www.googleapis.com",
+   "path": "/drive/v3/files",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "folder": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,256}$"
+     },
+     "pageSize": {
+      "const": "2"
+     },
+     "fields": {
+      "const": "nextPageToken,incompleteSearch,files(id,name,mimeType,createdTime,modifiedTime,version,size,webViewLink)"
+     },
+     "supportsAllDrives": {
+      "const": "true"
+     },
+     "includeItemsFromAllDrives": {
+      "const": "true"
+     },
+     "pageToken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+     }
+    },
+    "required": [
+     "folder",
+     "pageSize",
+     "fields",
+     "supportsAllDrives",
+     "includeItemsFromAllDrives"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "pageSize": "pageSize",
+    "fields": "fields",
+    "supportsAllDrives": "supportsAllDrives",
+    "includeItemsFromAllDrives": "includeItemsFromAllDrives",
+    "pageToken": "pageToken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "google_drive",
+     "scope": "account",
+     "name": "queries",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "query_templates": {
+    "q": "'{folder}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'"
+   },
+   "container_argument": "folder",
+   "resource_arguments": [
+    "folder"
+   ]
+  },
+  {
+   "id": "files.export",
+   "caller": "runner",
+   "method": "GET",
+   "host": "www.googleapis.com",
+   "path": "/drive/v3/files/{file}/export",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "file": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,256}$"
+     },
+     "mimeType": {
+      "enum": [
+       "text/plain",
+       "text/csv"
+      ]
+     }
+    },
+    "required": [
+     "file",
+     "mimeType"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "mimeType": "mimeType"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 196608,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "google_drive",
+     "scope": "account",
+     "name": "queries",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "response": "text",
+   "resource_arguments": [
+    "file"
+   ]
+  },
+  {
+   "id": "files.download",
+   "caller": "runner",
+   "method": "GET",
+   "host": "www.googleapis.com",
+   "path": "/drive/v3/files/{file}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "file": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,256}$"
+     },
+     "alt": {
+      "const": "media"
+     },
+     "supportsAllDrives": {
+      "const": "true"
+     }
+    },
+    "required": [
+     "file",
+     "alt",
+     "supportsAllDrives"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "alt": "alt",
+    "supportsAllDrives": "supportsAllDrives"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 196608,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "google_drive",
+     "scope": "account",
+     "name": "queries",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "response": "text",
+   "resource_arguments": [
+    "file"
+   ]
+  },
+  {
+   "id": "setup.folders.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "www.googleapis.com",
+   "path": "/drive/v3/files",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "folder": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,256}$"
+     },
+     "fields": {
+      "const": "nextPageToken,files(id,name)"
+     },
+     "orderBy": {
+      "const": "name"
+     },
+     "pageSize": {
+      "const": "100"
+     },
+     "pageToken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+     }
+    },
+    "required": [
+     "folder",
+     "fields",
+     "orderBy",
+     "pageSize"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "fields": "fields",
+    "orderBy": "orderBy",
+    "pageSize": "pageSize",
+    "pageToken": "pageToken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "google_drive",
+     "scope": "account",
+     "name": "queries",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "query_templates": {
+    "q": "'{folder}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+   }
+  }
+ ]
+}

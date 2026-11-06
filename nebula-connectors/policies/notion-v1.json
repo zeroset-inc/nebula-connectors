@@ -1,0 +1,198 @@
+{
+ "version": 1,
+ "provider": "notion",
+ "revision": "notion-inventory-v1",
+ "operations": [
+  {
+   "id": "users.me",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.notion.com",
+   "path": "/v1/users/me",
+   "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Notion-Version": "2022-06-28"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "notion",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 150,
+     "window_seconds": 60,
+     "concurrency": 2
+    }
+   ]
+  },
+  {
+   "id": "pages.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.notion.com",
+   "path": "/v1/pages/{page}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "page": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{32,36}$"
+     }
+    },
+    "required": [
+     "page"
+    ],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Notion-Version": "2022-06-28"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "notion",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 150,
+     "window_seconds": 60,
+     "concurrency": 2
+    }
+   ],
+   "container_argument": "page",
+   "resource_arguments": [
+    "page"
+   ]
+  },
+  {
+   "id": "blocks.children",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.notion.com",
+   "path": "/v1/blocks/{block}/children",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "block": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{32,36}$"
+     },
+     "page_size": {
+      "const": "100"
+     },
+     "start_cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+     }
+    },
+    "required": [
+     "block",
+     "page_size"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "page_size": "page_size",
+    "start_cursor": "start_cursor"
+   },
+   "headers": {
+    "Notion-Version": "2022-06-28"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 1048576,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "notion",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 150,
+     "window_seconds": 60,
+     "concurrency": 2
+    }
+   ],
+   "resource_arguments": [
+    "block"
+   ]
+  },
+  {
+   "id": "setup.search",
+   "caller": "control",
+   "method": "POST",
+   "host": "api.notion.com",
+   "path": "/v1/search",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "search": {
+      "type": "object",
+      "properties": {
+       "filter": {
+        "const": {
+         "property": "object",
+         "value": "page"
+        }
+       },
+       "page_size": {
+        "const": 100
+       },
+       "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+       },
+       "start_cursor": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+       }
+      },
+      "required": [
+       "filter",
+       "page_size"
+      ],
+      "additionalProperties": false
+     }
+    },
+    "required": [
+     "search"
+    ],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Notion-Version": "2022-06-28",
+    "Content-Type": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 1048576,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "notion",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 150,
+     "window_seconds": 60,
+     "concurrency": 2
+    }
+   ],
+   "body_argument": "search"
+  }
+ ]
+}

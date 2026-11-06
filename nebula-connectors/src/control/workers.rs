@@ -7,6 +7,8 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore, oneshot};
 
 use crate::webhook::{Error, Provider, Response};
 
+pub(super) const CAPACITY: usize = 8;
+
 pub(super) type Processor = dyn Fn(Provider, &[u8]) -> Result<Response, Error> + Send + Sync;
 
 pub(super) struct Pool {
@@ -23,7 +25,7 @@ struct Job {
 
 impl Pool {
     pub(super) fn new(provider: Provider, processor: Arc<Processor>) -> std::io::Result<Self> {
-        let (jobs, receive) = mpsc::sync_channel::<Job>(8);
+        let (jobs, receive) = mpsc::sync_channel::<Job>(CAPACITY);
         let receive = Arc::new(Mutex::new(receive));
         for _ in 0..2 {
             let receive = receive.clone();
@@ -53,7 +55,7 @@ impl Pool {
                 })?;
         }
         Ok(Self {
-            permits: Arc::new(Semaphore::new(8)),
+            permits: Arc::new(Semaphore::new(CAPACITY)),
             jobs,
         })
     }

@@ -1,0 +1,303 @@
+{
+ "version": 1,
+ "provider": "teams",
+ "revision": "teams-inventory-v1",
+ "operations": [
+  {
+   "id": "me.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/me",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "select": {
+      "const": "id"
+     }
+    },
+    "required": [
+     "select"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "teams",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "channels.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/teams/{team}/channels/{channel}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "team": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "channel": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "select": {
+      "const": "id,displayName"
+     }
+    },
+    "required": [
+     "team",
+     "channel",
+     "select"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "teams",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_template": "{team}~{channel}",
+   "resource_arguments": [
+    "team",
+    "channel"
+   ]
+  },
+  {
+   "id": "messages.list",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/teams/{team}/channels/{channel}/messages",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "team": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "channel": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "top": {
+      "const": "1"
+     },
+     "skiptoken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+     }
+    },
+    "required": [
+     "team",
+     "channel",
+     "top"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$top": "top",
+    "$skiptoken": "skiptoken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "teams",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_template": "{team}~{channel}",
+   "resource_arguments": [
+    "team",
+    "channel"
+   ]
+  },
+  {
+   "id": "replies.list",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/teams/{team}/channels/{channel}/messages/{message}/replies",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "team": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "channel": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "message": {
+      "type": "string",
+      "pattern": "^[0-9]{1,64}$"
+     },
+     "top": {
+      "const": "40"
+     },
+     "skiptoken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+     }
+    },
+    "required": [
+     "team",
+     "channel",
+     "message",
+     "top"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$top": "top",
+    "$skiptoken": "skiptoken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 2097152,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "teams",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_template": "{team}~{channel}",
+   "resource_arguments": [
+    "team",
+    "channel",
+    "message"
+   ]
+  },
+  {
+   "id": "setup.teams.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/me/joinedTeams",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "select": {
+      "const": "id,displayName"
+     },
+     "skiptoken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+     }
+    },
+    "required": [
+     "select"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select",
+    "$skiptoken": "skiptoken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "teams",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "setup.channels.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/teams/{team}/channels",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "select": {
+      "const": "id,displayName"
+     },
+     "skiptoken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+     },
+     "team": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     }
+    },
+    "required": [
+     "select",
+     "team"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select",
+    "$skiptoken": "skiptoken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "teams",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  }
+ ]
+}

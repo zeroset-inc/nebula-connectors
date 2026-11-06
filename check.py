@@ -59,7 +59,7 @@ def check(root):
                     if not isinstance(pin, dict):
                         errors.append(f"{name}: missing dependency pin {alias}")
                     elif alias == "nebula-connector-sdk":
-                        if pin != {"path": "nebula-connector-sdk", "version": "=0.1.0"}:
+                        if pin != {"path": "nebula-connector-sdk", "version": "=" + workspace["workspace"]["package"]["version"]}:
                             errors.append("SDK path must stay in the public workspace")
                     elif not str(pin.get("version", "")).startswith("=") or set(pin) - {"version", "features", "default-features"}:
                         errors.append(f"{name}: dependency {alias} needs an exact registry pin")

@@ -181,6 +181,58 @@
       "resource_arguments": [
         "channel"
       ]
+    },
+    {
+      "id": "setup.conversations.list",
+      "caller": "control",
+      "method": "GET",
+      "host": "slack.com",
+      "path": "/api/conversations.list",
+      "arguments": {
+        "type": "object",
+        "properties": {
+          "types": {
+            "const": "public_channel"
+          },
+          "exclude_archived": {
+            "const": "true"
+          },
+          "limit": {
+            "const": "200"
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "types",
+          "exclude_archived",
+          "limit"
+        ],
+        "additionalProperties": false
+      },
+      "query": {
+        "types": "types",
+        "exclude_archived": "exclude_archived",
+        "limit": "limit",
+        "cursor": "cursor"
+      },
+      "credential": "bearer",
+      "max_response_bytes": 1048576,
+      "timeout_seconds": 15,
+      "quotas": [
+        {
+          "namespace": "slack",
+          "scope": "account",
+          "name": "conversations.list",
+          "cost": 1,
+          "capacity": 20,
+          "window_seconds": 60,
+          "concurrency": 2
+        }
+      ]
     }
   ]
 }

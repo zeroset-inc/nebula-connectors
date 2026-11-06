@@ -1,0 +1,241 @@
+{
+ "version": 1,
+ "provider": "jira",
+ "revision": "jira-inventory-v1",
+ "operations": [
+  {
+   "id": "me.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/me",
+   "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "jira",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "projects.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/ex/jira/{cloud}/rest/api/3/project/{project}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "cloud": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+     },
+     "project": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+     }
+    },
+    "required": [
+     "cloud",
+     "project"
+    ],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "jira",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_template": "{cloud}~{project}",
+   "resource_arguments": [
+    "cloud",
+    "project"
+   ]
+  },
+  {
+   "id": "issues.search",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/ex/jira/{cloud}/rest/api/3/search/jql",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "cloud": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+     },
+     "project": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+     },
+     "fields": {
+      "const": "summary,description,status,issuetype,created,updated,comment"
+     },
+     "maxResults": {
+      "const": "4"
+     },
+     "nextPageToken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+     }
+    },
+    "required": [
+     "cloud",
+     "project",
+     "fields",
+     "maxResults"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "fields": "fields",
+    "maxResults": "maxResults",
+    "nextPageToken": "nextPageToken"
+   },
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 2097152,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "jira",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "query_templates": {
+    "jql": "project = \"{project}\" ORDER BY created ASC"
+   },
+   "container_template": "{cloud}~{project}",
+   "resource_arguments": [
+    "cloud",
+    "project"
+   ]
+  },
+  {
+   "id": "setup.sites.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/oauth/token/accessible-resources",
+   "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "jira",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "setup.projects.search",
+   "caller": "control",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/ex/jira/{cloud}/rest/api/3/project/search",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "cloud": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+     },
+     "maxResults": {
+      "const": "50"
+     },
+     "startAt": {
+      "type": "string",
+      "pattern": "^[0-9]{1,9}$"
+     },
+     "query": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+     }
+    },
+    "required": [
+     "cloud",
+     "maxResults",
+     "startAt"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "maxResults": "maxResults",
+    "startAt": "startAt",
+    "query": "query"
+   },
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "jira",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  }
+ ]
+}
