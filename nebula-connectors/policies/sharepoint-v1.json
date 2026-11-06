@@ -1,0 +1,294 @@
+{
+ "version": 1,
+ "provider": "sharepoint",
+ "revision": "sharepoint-inventory-v1",
+ "operations": [
+  {
+   "id": "me.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/me",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "select": {
+      "const": "id"
+     }
+    },
+    "required": [
+     "select"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "sharepoint",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "drives.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/drives/{drive}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "drive": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "select": {
+      "const": "id,name"
+     }
+    },
+    "required": [
+     "drive",
+     "select"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "sharepoint",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_argument": "drive",
+   "resource_arguments": [
+    "drive"
+   ]
+  },
+  {
+   "id": "drives.root.children",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/drives/{drive}/root/children",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "drive": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "select": {
+      "const": "id,name,file,folder,size,createdDateTime,lastModifiedDateTime,cTag,webUrl"
+     },
+     "top": {
+      "const": "2"
+     },
+     "skiptoken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+     }
+    },
+    "required": [
+     "drive",
+     "select",
+     "top"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select",
+    "$top": "top",
+    "$skiptoken": "skiptoken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "sharepoint",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_argument": "drive",
+   "resource_arguments": [
+    "drive"
+   ]
+  },
+  {
+   "id": "drives.items.content",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/drives/{drive}/items/{file}/content",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "drive": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "file": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     }
+    },
+    "required": [
+     "drive",
+     "file"
+    ],
+    "additionalProperties": false
+   },
+   "query": {},
+   "credential": "bearer",
+   "max_response_bytes": 196608,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "sharepoint",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "response": "text",
+   "redirect_hosts": [
+    "*.sharepoint.com"
+   ],
+   "container_argument": "drive",
+   "resource_arguments": [
+    "drive",
+    "file"
+   ]
+  },
+  {
+   "id": "setup.sites.search",
+   "caller": "control",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/sites",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "select": {
+      "const": "id,displayName,name"
+     },
+     "top": {
+      "const": "100"
+     },
+     "skiptoken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+     },
+     "search": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+     }
+    },
+    "required": [
+     "select",
+     "top",
+     "search"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select",
+    "$top": "top",
+    "$skiptoken": "skiptoken",
+    "search": "search"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "sharepoint",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "setup.drives.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/sites/{site}/drives",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "select": {
+      "const": "id,name"
+     },
+     "skiptoken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+     },
+     "site": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     }
+    },
+    "required": [
+     "select",
+     "site"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select",
+    "$skiptoken": "skiptoken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "sharepoint",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  }
+ ]
+}

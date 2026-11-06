@@ -54,5 +54,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --draft --prerelease --title "$GITHUB_REF_NAME — connector foundations" --notes "Foundation preview: protocol, Rust SDK, Slack inventory runner and callback verification runtime. Provider activation, complete ingestion and remaining provider ports are not included. See README for scope and artifact verification."
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --draft --prerelease --title "$GITHUB_REF_NAME — connector preview" --notes "Preview: connector contract, Rust SDK, provider adapters, managed OAuth/control profiles and persistent customer runner. Provider activation and live qualification belong to the consuming installation. See README for supported behavior and artifact verification."
           gh release edit "$GITHUB_REF_NAME" --draft=false

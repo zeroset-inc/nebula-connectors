@@ -1,0 +1,198 @@
+{
+ "version": 1,
+ "provider": "gmail",
+ "revision": "gmail-inventory-v1",
+ "operations": [
+  {
+   "id": "users.getProfile",
+   "caller": "runner",
+   "method": "GET",
+   "host": "gmail.googleapis.com",
+   "path": "/gmail/v1/users/me/profile",
+   "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+   },
+   "query": {},
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "gmail",
+     "scope": "account",
+     "name": "units",
+     "cost": 1,
+     "capacity": 12000,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "users.labels.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "gmail.googleapis.com",
+   "path": "/gmail/v1/users/me/labels/{label}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "label": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,256}$"
+     }
+    },
+    "required": [
+     "label"
+    ],
+    "additionalProperties": false
+   },
+   "query": {},
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "gmail",
+     "scope": "account",
+     "name": "units",
+     "cost": 1,
+     "capacity": 12000,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_argument": "label",
+   "resource_arguments": [
+    "label"
+   ]
+  },
+  {
+   "id": "users.messages.list",
+   "caller": "runner",
+   "method": "GET",
+   "host": "gmail.googleapis.com",
+   "path": "/gmail/v1/users/me/messages",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "label": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,256}$"
+     },
+     "maxResults": {
+      "const": "4"
+     },
+     "pageToken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+     }
+    },
+    "required": [
+     "label",
+     "maxResults"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "labelIds": "label",
+    "maxResults": "maxResults",
+    "pageToken": "pageToken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "gmail",
+     "scope": "account",
+     "name": "units",
+     "cost": 5,
+     "capacity": 12000,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_argument": "label",
+   "resource_arguments": [
+    "label"
+   ]
+  },
+  {
+   "id": "users.messages.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "gmail.googleapis.com",
+   "path": "/gmail/v1/users/me/messages/{message}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "message": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]{1,64}$"
+     },
+     "format": {
+      "const": "full"
+     }
+    },
+    "required": [
+     "message",
+     "format"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "format": "format"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 524288,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "gmail",
+     "scope": "account",
+     "name": "units",
+     "cost": 5,
+     "capacity": 12000,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "resource_arguments": [
+    "message"
+   ]
+  },
+  {
+   "id": "setup.labels.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "gmail.googleapis.com",
+   "path": "/gmail/v1/users/me/labels",
+   "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+   },
+   "query": {},
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "gmail",
+     "scope": "account",
+     "name": "units",
+     "cost": 5,
+     "capacity": 12000,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  }
+ ]
+}

@@ -1,7 +1,23 @@
+#[path = "runner/agent.rs"]
+mod agent;
+
 use std::process::ExitCode;
 
 use nebula_connector_sdk::{Client, Connector, runner, validation::decode_control};
-use nebula_connectors::slack::Slack;
+use nebula_connectors::{
+    box_files::BoxFiles,
+    confluence::Confluence,
+    dropbox::Dropbox,
+    github::GitHub,
+    gmail::Gmail,
+    google_drive::GoogleDrive,
+    jira::Jira,
+    microsoft_files::{OneDrive, SharePoint},
+    notion::Notion,
+    outlook::Outlook,
+    slack::Slack,
+    teams::Teams,
+};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::io::AsyncReadExt;
@@ -42,28 +58,34 @@ async fn main() -> ExitCode {
     }
 }
 
+const USAGE: &str = "usage: nebula-connector <slack|google_drive|gmail|onedrive|sharepoint|outlook|teams|notion|confluence|jira|box|dropbox|github> <spec|run> | pair --endpoint URL [--state-file PATH] | serve [--state-file PATH]";
+
 async fn execute() -> Result<(), String> {
     let mut args = std::env::args().skip(1);
     let provider = args.next();
-    let command = args.next();
-    if provider.as_deref() != Some("slack") || args.next().is_some() {
-        return Err("usage: nebula-connector slack <spec|run>".into());
+    if matches!(provider.as_deref(), Some("pair" | "serve")) {
+        return agent::execute(provider.as_deref().unwrap(), args.collect()).await;
     }
+    let command = args.next();
+    if args.next().is_some() {
+        return Err(USAGE.into());
+    }
+    let connector = connector(provider.as_deref().unwrap_or(""))?;
     match command.as_deref() {
         Some("spec") => {
             println!(
                 "{}",
-                serde_json::to_string(&Slack.specification())
+                serde_json::to_string(&connector.specification())
                     .map_err(|_| "connector_specification_failed")?
             );
             Ok(())
         }
-        Some("run") => run().await,
-        _ => Err("usage: nebula-connector slack <spec|run>".into()),
+        Some("run") => run(connector).await,
+        _ => Err(USAGE.into()),
     }
 }
 
-async fn run() -> Result<(), String> {
+async fn run(connector: &dyn Connector) -> Result<(), String> {
     let path =
         std::env::var("CONNECTOR_RUN_FILE").map_err(|_| "connector_run_configuration_invalid")?;
     let file = tokio::fs::File::open(path)
@@ -87,7 +109,7 @@ async fn run() -> Result<(), String> {
     .map_err(|error| error.to_string())?;
     config.bearer.zeroize();
     let completed = runner::run(
-        &Slack,
+        connector,
         client,
         &config.run_id,
         &config.scan_id,
@@ -114,3 +136,38 @@ async fn shutdown() {
     }
     let _ = tokio::signal::ctrl_c().await;
 }
+
+fn connector(provider: &str) -> Result<&'static dyn Connector, String> {
+    Ok(match provider {
+        "slack" => &Slack,
+        "google_drive" => &GoogleDrive,
+        "gmail" => &Gmail,
+        "onedrive" => &OneDrive,
+        "sharepoint" => &SharePoint,
+        "outlook" => &Outlook,
+        "teams" => &Teams,
+        "notion" => &Notion,
+        "confluence" => &Confluence,
+        "jira" => &Jira,
+        "box" => &BoxFiles,
+        "dropbox" => &Dropbox,
+        "github" => &GitHub,
+        _ => return Err(USAGE.into()),
+    })
+}
+
+const PROVIDERS: &[&str] = &[
+    "slack",
+    "google_drive",
+    "gmail",
+    "onedrive",
+    "sharepoint",
+    "outlook",
+    "teams",
+    "notion",
+    "confluence",
+    "jira",
+    "box",
+    "dropbox",
+    "github",
+];

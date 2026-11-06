@@ -66,6 +66,30 @@ Go HTTP/PostgreSQL tests cover durable completion and stale-owner rejection. The
 
 ## Provider runner
 
+A customer runner pairs once, then serves its explicitly bound connections:
+
+```sh
+nebula-connector pair --endpoint https://connectors.example.com
+nebula-connector serve
+```
+
+Approve the printed code in connection setup. Other connections in the same tenant
+can select that runner without pairing again. One process owns secret rotation;
+each replacement secret is persisted before exchange. Credentials are atomically
+saved in `~/.nebula-connector/runner.json` with owner-only permissions. Both commands
+accept `--state-file` for a private directory. `serve` resumes after restart, handles
+up to four independent assignments, and renews each run through the SDK. Hosted
+tasks retain the one-assignment `run` command below.
+
+The device poll supplies a locally persisted `secret`; matching delivery retries
+return the same runner ID until pairing expires or the runner is revoked. Token
+requests supply their persisted `replacement_secret` at token exchange. Matching
+retries keep the same access token and expiry; a superseded exchange returns zero
+remaining seconds and cannot replace a newer credential. Work polls send
+`protocol_version: 1`, supported providers, and free assignment slots (`limit` 0–4).
+A zero-slot poll maintains liveness without claiming work. Revoking the runner stops
+all bindings; removing one binding leaves its other connections intact.
+
 `nebula-connector slack spec` prints capabilities. `nebula-connector slack run`
 reads a private JSON file named by `CONNECTOR_RUN_FILE`, containing `endpoint`,
 `workspace_id`, `collection_id`, `connection_id`, `run_id`, `scan_id`,
@@ -95,6 +119,101 @@ provider qualification and engine settlement are still required before rollout.
 Slack component tests exercise the real adapter, SDK and executable against an
 HTTP service stub; Go tests check its actual policy and PostgreSQL/HTTP quota
 admission. This repository runs adapter tests; the Nebula service runs its PostgreSQL suite. These are not live Slack or complete ingestion tests.
+
+The Google Drive port (`nebula-connector google_drive run`) supports managed,
+complete inventories of the files directly inside each selected folder;
+subfolders are selected separately. Configuration is `{}`; authority is the
+Google account's numeric ID. Pages hold at most two files. Google Docs and
+Slides export as `text/plain`, Sheets as CSV, and plain, Markdown and HTML files
+are read as they are, up to 192 KiB each, as text content. Other files, larger
+files and empty text produce explicit skipped observations and presence; a file
+that cannot be read fails alone, while losing the folder fails the run. A read
+file's source revision is a digest of its text, so renaming, moving or sharing
+it keeps the revision; other files' revisions follow Drive's file version.
+
+`nebula-connectors/policies/google-drive-v1.json` permits five read operations.
+Listings bind the folder to a selected container through a query template, so
+the runner cannot list other folders. Exports and downloads name a file ID that
+the broker records but cannot yet trace to a selected folder; that check, file
+transfer and incremental changes remain in progress. Drive component tests use
+the same HTTP service stub as Slack's; they are not live Drive tests.
+
+The Gmail port (`nebula-connector gmail run`) inventories every message carrying
+a selected label, four per page. Text is the plain body, or the HTML body when
+there is no plain one, behind the subject, sender, recipients and date, up to
+96 KiB. Attachments are never read; empty and larger bodies are skipped with
+presence, and a message that cannot be read fails alone. The source revision is
+the message ID, since Gmail messages do not change. Authority is the Google
+account's numeric ID, as for Drive.
+
+`nebula-connectors/policies/gmail-v1.json` permits four read operations. Label
+listings bind the label to a selected container; message reads name a message
+ID that the broker records but cannot yet trace to a selected label. Gmail
+component tests use the same HTTP service stub; they are not live Gmail tests.
+
+The Microsoft 365 ports read through Microsoft Graph for a work account,
+whose authority is its Entra object ID. OneDrive inventories the files directly
+inside each selected folder and SharePoint the top of each selected document
+library: plain, Markdown, CSV and HTML files are read as text up to 192 KiB,
+through Graph's download redirect, which the broker follows without the
+credential to the catalog's Microsoft hosts; Office and other files are skipped
+with presence until file transfer exists. Outlook reads every message in a
+selected mail folder as its plain text body behind its headers, up to 96 KiB.
+Teams reads a selected channel, named `team~channel`, one message at a time and
+then its replies; deleted messages are left out so the inventory withdraws them.
+Every run first checks that the token still belongs to the connection's account.
+
+`onedrive-v1.json`, `sharepoint-v1.json`, `outlook-v1.json` and `teams-v1.json`
+bind every listing to a selected container; Teams binds the team and channel
+together through a container template. Outlook asks Graph for text bodies with
+a `Prefer` header. Microsoft component tests use the same HTTP service stub;
+they are not live Graph tests.
+
+The Notion port reads each selected page as one Markdown source built from its
+blocks: headings, lists, to-dos, quotes, code, tables and nested blocks, up to
+192 KiB and 60 block reads. Subpages and databases appear as links and sync only
+when selected; archived pages are left out so the inventory withdraws them.
+Authority is the Notion workspace ID. `notion-v1.json` binds page reads to
+selected pages; block reads name a block the broker records but cannot yet trace
+to a selected page.
+
+The Confluence and Jira ports reach a site through `api.atlassian.com` with its
+cloud ID, so a container names the site and a space ID or project key:
+`<cloud>~<space>` or `<cloud>~<KEY>`. Authority is the Atlassian account ID,
+which each run checks against `/me`. Confluence lists a space's current pages
+four at a time and reads each one's stored XHTML, up to 96 KiB, as `text/html`;
+a page the account cannot open fails alone, and a page read must name the
+selected space. Jira searches a project's issues four at a time and writes each
+as plain text: key, summary, type, status, description and up to 100 comments,
+converted from Atlassian Document Format. An issue's revision follows its
+`updated` time, which new comments also change. `confluence-v1.json` and
+`jira-v1.json` bind listings and searches to the selected container; page reads
+name a page the adapter checks against its space.
+
+The Box and Dropbox ports read the files directly inside each selected folder,
+like Drive's: plain text, Markdown and HTML up to 192 KiB, with other files
+observed as unsupported. A file's revision follows the provider's content hash
+(Box's SHA-1, Dropbox's `content_hash`), so renames and moves keep it. Box
+downloads follow one redirect to `dl.boxcloud.com` without the credential.
+Dropbox addresses folders by ID; `dropbox-v1.json` builds each listing body
+from the selected folder with a body template, and the continuation takes only
+the cursor Dropbox returned. The authority is the Box user ID or the Dropbox
+account ID.
+
+The GitHub port reads every issue and pull request in a selected `owner/name`
+repository, oldest first, four a page, as Markdown with its labels, body and up
+to 20 comments. An issue's revision follows its `updated_at` time, which new
+comments also change. The authority is the user's numeric ID. Issues deleted
+during a scan can shift later ones to pages already read, so the next scan
+restores any it missed. The shared file helpers in `files.rs` also serve the
+OneDrive and SharePoint ports.
+
+Every catalog also carries `setup.*` operations with `caller: "control"`. They
+are what a connection's picker sends before any run exists, such as listing
+Drive folders or Slack channels: names and IDs only, never content, and they
+bind no selected container. The broker admits them against the connection's
+current grant instead of a run lease, and they share the catalog's quotas with
+the runner operations. Teams operations now share one quota rule.
 
 ## Control runtime
 
@@ -142,12 +261,12 @@ private service; an artifact, runner image or connector manifest cannot expand
 managed provider access.
 
 ```sh
-gh release download v0.1.0 --repo zeroset-inc/nebula-connectors \
+gh release download v0.2.0 --repo zeroset-inc/nebula-connectors \
   --pattern nebula-connectors-source.tar.gz
 gh attestation verify nebula-connectors-source.tar.gz \
   --repo zeroset-inc/nebula-connectors \
   --signer-workflow zeroset-inc/nebula-connectors/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.1.0 --source-digest <reviewed-commit> \
+  --source-ref refs/tags/v0.2.0 --source-digest <reviewed-commit> \
   --deny-self-hosted-runners
 ```
 

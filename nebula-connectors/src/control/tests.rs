@@ -164,3 +164,74 @@ async fn accepted_socket_limit_covers_incomplete_headers_and_drain_closes_them()
         );
     }
 }
+
+#[tokio::test]
+#[allow(
+    clippy::disallowed_methods,
+    reason = "Local authenticated control HTTP proof with bounded client timeout"
+)]
+async fn oauth_control_authenticates_and_returns_only_the_reviewed_profile() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let runtime = Runtime::new(Credentials {
+        tokens: vec![TOKEN.to_owned()],
+    })
+    .unwrap();
+    let (stop, stopped) = tokio::sync::oneshot::channel();
+    let server = tokio::spawn(serve(listener, runtime, async {
+        let _ = stopped.await;
+    }));
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(4))
+        .build()
+        .unwrap();
+    let url = format!("http://{address}/v1/providers/slack/oauth");
+    let input = serde_json::json!({"context":{"version":1,"attempt_id":"attempt","tenant_id":"tenant","connection_id":"connection"},"action":"exchange"});
+    assert_eq!(
+        client
+            .post(&url)
+            .json(&input)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    let response = client
+        .post(&url)
+        .bearer_auth(TOKEN)
+        .json(&input)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    let value: serde_json::Value = response.json().await.unwrap();
+    assert_eq!(value["context"], input["context"]);
+    assert_eq!(
+        value["profile"]["token_url"],
+        "https://slack.com/api/oauth.v2.access"
+    );
+    assert_eq!(value["profile_digest"].as_str().unwrap().len(), 64);
+    assert!(value["result"].is_null());
+    let mut malformed = input.clone();
+    malformed["context"]["tenant_id"] = serde_json::json!("");
+    assert_eq!(
+        client
+            .post(&url)
+            .bearer_auth(TOKEN)
+            .json(&malformed)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+    stop.send(()).unwrap();
+    tokio::time::timeout(Duration::from_secs(4), server)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+}

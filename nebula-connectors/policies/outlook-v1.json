@@ -1,0 +1,242 @@
+{
+ "version": 1,
+ "provider": "outlook",
+ "revision": "outlook-inventory-v1",
+ "operations": [
+  {
+   "id": "me.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/me",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "select": {
+      "const": "id"
+     }
+    },
+    "required": [
+     "select"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "outlook",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "mailFolders.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/me/mailFolders/{folder}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "folder": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "select": {
+      "const": "id,displayName"
+     }
+    },
+    "required": [
+     "folder",
+     "select"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "outlook",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_argument": "folder",
+   "resource_arguments": [
+    "folder"
+   ]
+  },
+  {
+   "id": "messages.list",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/me/mailFolders/{folder}/messages",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "folder": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "select": {
+      "const": "id"
+     },
+     "top": {
+      "const": "4"
+     },
+     "skip": {
+      "type": "string",
+      "pattern": "^[0-9]{1,9}$"
+     },
+     "skiptoken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+     }
+    },
+    "required": [
+     "folder",
+     "select",
+     "top"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select",
+    "$top": "top",
+    "$skip": "skip",
+    "$skiptoken": "skiptoken"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "outlook",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_argument": "folder",
+   "resource_arguments": [
+    "folder"
+   ]
+  },
+  {
+   "id": "messages.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/me/messages/{message}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "message": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "select": {
+      "const": "id,subject,from,toRecipients,receivedDateTime,lastModifiedDateTime,changeKey,body,webLink"
+     }
+    },
+    "required": [
+     "message",
+     "select"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 524288,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "outlook",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "headers": {
+    "Prefer": "outlook.body-content-type=\"text\""
+   },
+   "resource_arguments": [
+    "message"
+   ]
+  },
+  {
+   "id": "setup.folders.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/me/mailFolders",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "select": {
+      "const": "id,displayName,childFolderCount"
+     },
+     "top": {
+      "const": "100"
+     },
+     "skip": {
+      "type": "string",
+      "pattern": "^[0-9]{1,9}$"
+     }
+    },
+    "required": [
+     "select",
+     "top"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "$select": "select",
+    "$top": "top",
+    "$skip": "skip"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "outlook",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  }
+ ]
+}

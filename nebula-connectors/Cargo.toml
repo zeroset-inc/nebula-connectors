@@ -19,8 +19,6 @@ sha2.workspace = true
 tokio.workspace = true
 zeroize.workspace = true
 uuid.workspace = true
-
-[dev-dependencies]
 reqwest.workspace = true
 
 [[bin]]

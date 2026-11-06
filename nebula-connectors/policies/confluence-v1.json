@@ -1,0 +1,285 @@
+{
+ "version": 1,
+ "provider": "confluence",
+ "revision": "confluence-inventory-v1",
+ "operations": [
+  {
+   "id": "me.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/me",
+   "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "confluence",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "spaces.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/ex/confluence/{cloud}/wiki/api/v2/spaces/{space}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "cloud": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+     },
+     "space": {
+      "type": "string",
+      "pattern": "^[0-9]{1,32}$"
+     }
+    },
+    "required": [
+     "cloud",
+     "space"
+    ],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 65536,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "confluence",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_template": "{cloud}~{space}",
+   "resource_arguments": [
+    "cloud",
+    "space"
+   ]
+  },
+  {
+   "id": "pages.list",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/ex/confluence/{cloud}/wiki/api/v2/spaces/{space}/pages",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "cloud": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+     },
+     "space": {
+      "type": "string",
+      "pattern": "^[0-9]{1,32}$"
+     },
+     "limit": {
+      "const": "4"
+     },
+     "status": {
+      "const": "current"
+     },
+     "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     }
+    },
+    "required": [
+     "cloud",
+     "space",
+     "limit",
+     "status"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "limit": "limit",
+    "status": "status",
+    "cursor": "cursor"
+   },
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "confluence",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "container_template": "{cloud}~{space}",
+   "resource_arguments": [
+    "cloud",
+    "space"
+   ]
+  },
+  {
+   "id": "pages.get",
+   "caller": "runner",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/ex/confluence/{cloud}/wiki/api/v2/pages/{page}",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "cloud": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+     },
+     "page": {
+      "type": "string",
+      "pattern": "^[0-9]{1,32}$"
+     },
+     "body-format": {
+      "const": "storage"
+     }
+    },
+    "required": [
+     "cloud",
+     "page",
+     "body-format"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "body-format": "body-format"
+   },
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 524288,
+   "timeout_seconds": 30,
+   "quotas": [
+    {
+     "namespace": "confluence",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "resource_arguments": [
+    "cloud",
+    "page"
+   ]
+  },
+  {
+   "id": "setup.sites.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/oauth/token/accessible-resources",
+   "arguments": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+   },
+   "query": {},
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "confluence",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  },
+  {
+   "id": "setup.spaces.list",
+   "caller": "control",
+   "method": "GET",
+   "host": "api.atlassian.com",
+   "path": "/ex/confluence/{cloud}/wiki/api/v2/spaces",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "cloud": {
+      "type": "string",
+      "pattern": "^[0-9a-f-]{36}$"
+     },
+     "limit": {
+      "const": "100"
+     },
+     "cursor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+     }
+    },
+    "required": [
+     "cloud",
+     "limit"
+    ],
+    "additionalProperties": false
+   },
+   "query": {
+    "limit": "limit",
+    "cursor": "cursor"
+   },
+   "headers": {
+    "Accept": "application/json"
+   },
+   "credential": "bearer",
+   "max_response_bytes": 262144,
+   "timeout_seconds": 15,
+   "quotas": [
+    {
+     "namespace": "confluence",
+     "scope": "account",
+     "name": "requests",
+     "cost": 1,
+     "capacity": 300,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ]
+  }
+ ]
+}
