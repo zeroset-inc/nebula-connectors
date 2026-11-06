@@ -5,6 +5,7 @@ pub mod box_files;
 mod common;
 pub mod confluence;
 pub mod control;
+pub mod discovery;
 pub mod dropbox;
 mod files;
 pub mod github;
