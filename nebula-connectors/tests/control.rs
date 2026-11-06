@@ -161,3 +161,116 @@ async fn callback_storm_cannot_consume_another_providers_reserved_capacity() {
         );
     }
 }
+
+#[tokio::test]
+#[allow(
+    clippy::disallowed_methods,
+    reason = "Local discovery RPC test with bounded requests"
+)]
+async fn discovery_rpc_requires_identity_and_rejects_unknown_fields_versions_and_oversize() {
+    let server = Server::start().await;
+    let client = http();
+    let url = format!(
+        "http://{}/v1/providers/google_drive/discovery",
+        server.address
+    );
+    let payload = json!({
+        "context":{"version":1,"attempt_id":"attempt","tenant_id":"tenant","connection_id":"connection"},
+        "parent":"","query":"","cursor":"","pages":0,"matched":0,"response":null
+    });
+    let response = client.post(&url).json(&payload).send().await.unwrap();
+    assert_eq!(response.status(), 401);
+    let response = client
+        .post(&url)
+        .bearer_auth(TOKEN)
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    let body: Value = response.json().await.unwrap();
+    assert_eq!(body["context"], payload["context"]);
+    assert_eq!(body["operation"]["name"], "setup.folders.list");
+    assert_eq!(body["operation"]["arguments"]["folder"], "root");
+    for invalid in [
+        {
+            let mut value = payload.clone();
+            value["context"]["version"] = 2.into();
+            value
+        },
+        {
+            let mut value = payload.clone();
+            value["unexpected"] = true.into();
+            value
+        },
+        {
+            let mut value = payload.clone();
+            value["pages"] = 5.into();
+            value
+        },
+    ] {
+        assert_eq!(
+            client
+                .post(&url)
+                .bearer_auth(TOKEN)
+                .json(&invalid)
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            400
+        );
+    }
+    assert_eq!(
+        client
+            .post(&url)
+            .bearer_auth(TOKEN)
+            .header("content-type", "application/json")
+            .body("{\"parent\":\"\",\"parent\":\"other\"}")
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+    let oversized = " ".repeat(nebula_connectors::discovery::MAX_RPC_BYTES + 1);
+    assert_eq!(
+        client
+            .post(&url)
+            .bearer_auth(TOKEN)
+            .header("content-type", "application/json")
+            .body(oversized)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        400
+    );
+}
+
+#[tokio::test]
+#[allow(
+    clippy::disallowed_methods,
+    reason = "Local bounded discovery RPC verifies the catalog-sized body path"
+)]
+async fn discovery_rpc_accepts_a_catalog_sized_github_body() {
+    let server = Server::start().await;
+    let client = http();
+    let body = json!([{"full_name":"owner/repository","description":"x".repeat((1<<20)+1)}]);
+    let request = json!({"context":{"version":1,"attempt_id":"attempt","tenant_id":"tenant","connection_id":"connection"},"parent":"","query":"","cursor":"","pages":0,"matched":0,"response":body});
+    let response = client
+        .post(format!(
+            "http://{}/v1/providers/github/discovery",
+            server.address
+        ))
+        .bearer_auth(TOKEN)
+        .json(&request)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    let body: Value = response.json().await.unwrap();
+    assert_eq!(body["page"]["items"].as_array().unwrap().len(), 1);
+    assert_eq!(body["page"]["items"][0]["id"], "owner/repository");
+}

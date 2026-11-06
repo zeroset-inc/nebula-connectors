@@ -223,6 +223,16 @@ for one subscription; responses bind the tenant, connection, attempt and revisio
 The runtime has no database, keyring or provider network access. It uses a separate
 workload identity and accepts only broker traffic at the deployment boundary.
 
+Setup discovery uses `POST /v1/providers/{provider}/discovery`, contract version 1.
+A request without a provider response returns an approved `setup.*` operation;
+a request with its response returns normalized resources and a parent/query-bound
+cursor. The broker executes every HTTP request and retains credentials, quotas
+and journaling. Provider bodies and normalized results each have a 2 MiB budget;
+the input RPC allows another 32 KiB for context. Slack search continues for at
+most five pages or until 200 matches; other pickers return one provider page.
+An empty filtered page retains its cursor. This setup API is separate from the
+runner's `discover`, which describes already-selected resources.
+
 Set `CONNECTOR_CONTROL_CREDENTIALS_FILE` to a private JSON file containing
 `{"tokens":["<32–512 character workload token>"]}`. Two tokens support rotation.
 `CONNECTOR_CONTROL_LISTEN` defaults to `127.0.0.1:8092`; terminate TLS at workload
