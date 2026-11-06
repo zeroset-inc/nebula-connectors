@@ -33,8 +33,7 @@ pub(super) fn interpret(
     value: &Value,
 ) -> Result<(Vec<Resource>, String)> {
     let mut items = vec![];
-    let next;
-    match provider {
+    let next = match provider {
         "slack" => {
             if value["ok"] != true {
                 return Err(match text(value, "error") {
@@ -59,10 +58,10 @@ pub(super) fn interpret(
                     ));
                 }
             }
-            next = text(&value["response_metadata"], "next_cursor").into();
+            text(&value["response_metadata"], "next_cursor").into()
         }
         _ => return Err(Error::Unavailable),
-    }
+    };
     Ok((items, next))
 }
 
