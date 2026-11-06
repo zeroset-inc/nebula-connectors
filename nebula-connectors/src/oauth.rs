@@ -61,6 +61,9 @@ pub struct Response {
 
 #[derive(Serialize)]
 pub struct Profile {
+    /// S256 support for this approved client flow. Slack remains a confidential
+    /// bot client: its PKCE opt-in changes app type and refresh-token lifetime.
+    pub pkce: bool,
     pub token_url: &'static str,
     pub identity_url: &'static str,
     pub identity_method: &'static str,
@@ -139,6 +142,17 @@ fn profile(provider: &str) -> Option<Profile> {
         _ => return None,
     };
     Some(Profile {
+        pkce: matches!(
+            provider,
+            "google_drive"
+                | "gmail"
+                | "onedrive"
+                | "sharepoint"
+                | "outlook"
+                | "teams"
+                | "dropbox"
+                | "github"
+        ),
         token_url,
         identity_url,
         identity_id,
@@ -417,6 +431,24 @@ mod tests {
             .kind,
             "uncertain"
         );
+    }
+    #[test]
+    fn pkce_is_an_approved_provider_capability() {
+        for provider in [
+            "google_drive",
+            "gmail",
+            "onedrive",
+            "sharepoint",
+            "outlook",
+            "teams",
+            "dropbox",
+            "github",
+        ] {
+            assert!(profile(provider).unwrap().pkce, "{provider}");
+        }
+        for provider in ["slack", "notion", "confluence", "jira", "box"] {
+            assert!(!profile(provider).unwrap().pkce, "{provider}");
+        }
     }
     #[test]
     fn cleanup_distinguishes_token_revocation_from_account_wide_revocation() {
