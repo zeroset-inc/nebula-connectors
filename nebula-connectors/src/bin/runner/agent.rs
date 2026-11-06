@@ -324,6 +324,10 @@ impl Transport {
             .map_err(|_| "runner_transport_failed")?;
         Ok(Self { http, base })
     }
+    #[allow(
+        clippy::disallowed_methods,
+        reason = "Audited transport: serial control requests, bounded timeout and response bytes; redirects disabled"
+    )]
     async fn request(
         &self,
         path: &str,
