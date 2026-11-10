@@ -11,7 +11,7 @@ use nebula_connector_sdk::{
 };
 use serde_json::{Value, json};
 
-use crate::common::{Result, broker_read};
+use crate::common::{Result, broker_read_bounded};
 
 /// Files per page. Each file costs two events and up to `MAX_TEXT_BYTES` of
 /// content, so two keep a page within the runner's 1 MiB batch.
@@ -48,14 +48,14 @@ pub(crate) async fn fetch_text(
     context: &Context,
     operation: &str,
     arguments: Value,
+    max_bytes: u64,
 ) -> Result<Fetched> {
-    let body = match broker_read(context, operation, arguments).await {
+    let body = match broker_read_bounded(context, operation, arguments, Some(max_bytes)).await {
         Ok(response) => response.body,
         Err(ClientError::Provider(failure)) => {
             return Ok(match (failure.code, failure.provider_status) {
-                (ProviderFailureCode::ResponseLimit | ProviderFailureCode::InvalidResponse, _) => {
-                    Fetched::Skipped("unsupported")
-                }
+                (ProviderFailureCode::ResponseLimit, _) => Fetched::Skipped("too_large"),
+                (ProviderFailureCode::InvalidResponse, _) => Fetched::Skipped("unsupported"),
                 (_, 401) => return Err(ConnectorError::Permission),
                 (_, 403) => Fetched::Failed("access_denied"),
                 (_, 404 | 409) => Fetched::Failed("unavailable"),
@@ -111,7 +111,7 @@ pub(crate) async fn file_events<F>(
     context: &Context,
     file: &File<'_>,
     observed_at_ms: i64,
-    fetch: impl FnOnce() -> F,
+    fetch: impl FnOnce(u64) -> F,
 ) -> Result<Vec<ConnectorEvent>>
 where
     F: Future<Output = Result<Fetched>>,
@@ -158,9 +158,18 @@ where
     // Content is read only for selected files, so an exclusion never fetches.
     let fetched = match (selection, media_type) {
         (Selection::Selected, Some(_)) if file.size.is_some_and(|size| size > MAX_TEXT_BYTES) => {
-            Fetched::Skipped("unsupported")
+            Fetched::Skipped("too_large")
         }
-        (Selection::Selected, Some(_)) => fetch().await?,
+        (Selection::Selected, Some(_)) => {
+            let eligibility = context
+                .service
+                .source_eligibility(&context.run, file.name, content_type, file.size)
+                .await?;
+            match eligibility.reason {
+                Some(reason) => Fetched::Skipped(reason.as_str()),
+                None => fetch(eligibility.max_bytes.min(MAX_TEXT_BYTES)).await?,
+            }
+        }
         (Selection::Selected, None) => Fetched::Skipped("unsupported"),
         (_, _) => Fetched::Skipped(selection.reason()),
     };
@@ -186,7 +195,7 @@ where
             "observation_id":observation_id,"source":source,"observed_at_ms":observed_at_ms});
         if let (Fetched::Text(text), Some(media_type)) = (fetched, media_type) {
             change["permissions"] = json!({"state":"unavailable"});
-            change["metadata"] = json!({"provider":file.provider,"item_id":file.id,"name":file.name,"container_id":file.container});
+            change["metadata"] = json!({"provider":file.provider,"item_id":file.id,"name":file.name,"filename":file.name,"container_id":file.container});
             if let Some(mime_type) = file.mime_type {
                 change["metadata"]["mime_type"] = mime_type.into();
             }

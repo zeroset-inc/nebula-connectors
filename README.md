@@ -314,3 +314,9 @@ Never commit provider credentials or customer data; tests use synthetic fixtures
 See [Go connector foundations](../services/connectors/README.md) for decoder
 limits, dependency enforcement and test commands. Generated Rust types do not
 replace runtime validation.
+
+File readers require the service's authenticated run `source-eligibility`
+endpoint. They check the admitted representation before requesting provider
+content and narrow each broker response to the returned byte bound. The decision
+reserves no engine capacity; actual source bytes still undergo final validation.
+Service compatibility follows this contract, rather than the runner's release age.

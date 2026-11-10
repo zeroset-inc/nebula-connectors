@@ -85,3 +85,37 @@ async fn box_refuses_a_token_for_another_user() {
     assert!(server.run(&BoxFiles).await.is_err());
     assert_eq!(server.operations().await.len(), 1);
 }
+
+#[tokio::test]
+async fn engine_table_rejection_never_downloads_the_file() {
+    let server = Server::start_as(
+        "box",
+        "7001",
+        vec![
+            json!({"type":"user","id":"7001"}),
+            json!({"entries":[file("101","rows.csv",64)],"next_marker":null}),
+        ],
+        json!({"containers":["55"]}),
+    )
+    .await;
+    server
+        .eligibility_for(
+            "rows.csv",
+            json!({"eligible":false,"max_bytes":1024,"reason":"table_import_required"}),
+        )
+        .await;
+    server.run(&BoxFiles).await.unwrap();
+    assert_eq!(
+        server
+            .operations()
+            .await
+            .iter()
+            .map(|(op, _)| op.as_str())
+            .collect::<Vec<_>>(),
+        ["users.me", "folders.items"]
+    );
+    let events = server.events().await;
+    let file = of_object(&events, "101");
+    assert_eq!(file[0]["reason"], "table_import_required");
+    assert_eq!(file[1]["type"], "presence");
+}
