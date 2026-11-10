@@ -236,12 +236,12 @@ async fn entry_events(
         url: None,
     };
     let downloadable = entry["is_downloadable"] != false;
-    file_events(context, &file, observed_at_ms, || async move {
+    file_events(context, &file, observed_at_ms, |max_bytes| async move {
         if !downloadable {
             return Ok(Fetched::Skipped("unsupported"));
         }
         let arg = json!({"path":id}).to_string();
-        fetch_text(context, "files.download", json!({"arg":arg})).await
+        fetch_text(context, "files.download", json!({"arg":arg}), max_bytes).await
     })
     .await
 }

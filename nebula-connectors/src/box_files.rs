@@ -230,8 +230,8 @@ async fn entry_events(
         modified_at_ms: time("modified_at")?,
         url: Some(&url),
     };
-    file_events(context, &file, observed_at_ms, || {
-        fetch_text(context, "files.content", json!({"file":id}))
+    file_events(context, &file, observed_at_ms, |max_bytes| {
+        fetch_text(context, "files.content", json!({"file":id}), max_bytes)
     })
     .await
 }

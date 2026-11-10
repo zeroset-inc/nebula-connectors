@@ -11,7 +11,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::{
-    common::{Cursor, Response, Result, broker_read, observed_now, request, timestamp_ms},
+    common::{Cursor, Response, Result, broker_read_bounded, observed_now, request, timestamp_ms},
     google::{google_id, validate_context},
 };
 
@@ -240,7 +240,7 @@ enum Fetched {
     Failed(&'static str),
 }
 
-async fn fetch(context: &Context, file: &File, text: &Text) -> Result<Fetched> {
+async fn fetch(context: &Context, file: &File, text: &Text, max_bytes: u64) -> Result<Fetched> {
     let mut arguments = json!({"file":file.id});
     if let Some(export) = text.export {
         arguments["mimeType"] = export.into();
@@ -248,11 +248,12 @@ async fn fetch(context: &Context, file: &File, text: &Text) -> Result<Fetched> {
         arguments["alt"] = "media".into();
         arguments["supportsAllDrives"] = "true".into();
     }
-    let body = match broker_read(context, text.operation, arguments).await {
+    let body = match broker_read_bounded(context, text.operation, arguments, Some(max_bytes)).await
+    {
         Ok(response) => response.body,
         Err(ClientError::Provider(failure)) => {
             return Ok(match (failure.code, failure.provider_status) {
-                (ProviderFailureCode::ResponseLimit, _) => Fetched::Skipped("unsupported"),
+                (ProviderFailureCode::ResponseLimit, _) => Fetched::Skipped("too_large"),
                 (ProviderFailureCode::InvalidResponse, _) => Fetched::Skipped("unsupported"),
                 (_, 401) => return Err(ConnectorError::Permission),
                 (_, 403) => Fetched::Failed("access_denied"),
@@ -311,10 +312,31 @@ async fn file_events(
     let text = text_of(&file.mime_type);
     // Content is read only for selected files, so an exclusion never fetches.
     let fetched = match (selection, &text) {
-        (Selection::Selected, Some(_)) if size.is_some_and(|size| size > MAX_TEXT_BYTES) => {
-            Fetched::Skipped("unsupported")
+        (Selection::Selected, Some(text))
+            if text.export.is_none() && size.is_some_and(|size| size > MAX_TEXT_BYTES) =>
+        {
+            Fetched::Skipped("too_large")
         }
-        (Selection::Selected, Some(text)) => fetch(context, file, text).await?,
+        (Selection::Selected, Some(text)) => {
+            let media = text.export.unwrap_or(&file.mime_type);
+            let size = if text.export.is_some() { None } else { size };
+            let eligibility = context
+                .service
+                .source_eligibility(&context.run, &file.name, media, size)
+                .await?;
+            match eligibility.reason {
+                Some(reason) => Fetched::Skipped(reason.as_str()),
+                None => {
+                    fetch(
+                        context,
+                        file,
+                        text,
+                        eligibility.max_bytes.min(MAX_TEXT_BYTES),
+                    )
+                    .await?
+                }
+            }
+        }
         (Selection::Selected, None) => Fetched::Skipped("unsupported"),
         (_, _) => Fetched::Skipped(selection.reason()),
     };
@@ -380,7 +402,7 @@ async fn file_events(
                 .ok_or(ConnectorError::Response)?;
             change["permissions"] = json!({"state":"unavailable"});
             change["metadata"] = json!({"provider":"google_drive","file_id":file.id,
-                "name":file.name,"mime_type":file.mime_type,"folder_id":folder});
+                "name":file.name,"filename":file.name,"mime_type":file.mime_type,"folder_id":folder});
             change["content"] = json!({"kind":"text","text":content,"media_type":media_type,
                 "representation_version":REPRESENTATION});
         }

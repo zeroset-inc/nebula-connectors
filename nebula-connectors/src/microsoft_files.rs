@@ -248,8 +248,8 @@ async fn item_events(
     if files.container_argument == "drive" {
         arguments["drive"] = container.into();
     }
-    file_events(context, &file, observed_at_ms, || {
-        fetch_text(context, files.content, arguments)
+    file_events(context, &file, observed_at_ms, |max_bytes| {
+        fetch_text(context, files.content, arguments, max_bytes)
     })
     .await
 }

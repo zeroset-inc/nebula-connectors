@@ -769,7 +769,9 @@
             "unavailable",
             "empty",
             "fetch_failed",
-            "revision_changed"
+            "revision_changed",
+            "too_large",
+            "table_import_required"
           ]
         },
         "sha256": {

@@ -154,6 +154,30 @@ pub struct ProviderResponse {
     pub body: Value,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceEligibility {
+    pub eligible: bool,
+    pub max_bytes: u64,
+    pub reason: Option<SourceIneligible>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceIneligible {
+    TooLarge,
+    TableImportRequired,
+}
+
+impl SourceIneligible {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::TooLarge => "too_large",
+            Self::TableImportRequired => "table_import_required",
+        }
+    }
+}
+
 impl Client {
     /// HTTPS is required except for loopback development or a local enterprise gateway.
     /// The bearer is a Nebula credential; provider tokens never enter this transport.
@@ -363,6 +387,37 @@ impl Client {
         Ok(receipt)
     }
 
+    /// Checks the admitted representation before downloading it. The decision
+    /// reserves no capacity; actual bytes must still pass engine admission.
+    pub async fn source_eligibility(
+        &self,
+        run: &Run,
+        filename: &str,
+        content_type: &str,
+        size_bytes: Option<u64>,
+    ) -> Result<SourceEligibility, ClientError> {
+        let body = encode_bounded(
+            &json!({
+                "fence":run.fence,"filename":filename,
+                "content_type":content_type,"size_bytes":size_bytes,
+            }),
+            65536,
+        )
+        .map_err(|_| ClientError::Configuration)?;
+        let result: SourceEligibility = self
+            .send(
+                Method::POST,
+                &["runs", &run.id, "source-eligibility"],
+                Some(body),
+                8192,
+            )
+            .await?;
+        if result.max_bytes == 0 || result.eligible == result.reason.is_some() {
+            return Err(ClientError::Response);
+        }
+        Ok(result)
+    }
+
     /// Attempts are never silently retried. An uncertain result requires a fresh
     /// attempt ID; the service retains the original quota charge and audit record.
     pub async fn provider(
@@ -372,6 +427,22 @@ impl Client {
         operation: &str,
         arguments: Value,
     ) -> Result<ProviderResponse, ClientError> {
+        self.provider_bounded(run, attempt, operation, arguments, None)
+            .await
+    }
+
+    /// A caller may narrow the approved response limit, never expand it.
+    pub async fn provider_bounded(
+        &self,
+        run: &Run,
+        attempt: &str,
+        operation: &str,
+        arguments: Value,
+        max_response_bytes: Option<u64>,
+    ) -> Result<ProviderResponse, ClientError> {
+        if max_response_bytes == Some(0) {
+            return Err(ClientError::Configuration);
+        }
         validate_id(attempt)?;
         #[derive(Serialize)]
         struct Request<'a> {
@@ -379,6 +450,8 @@ impl Client {
             id: &'a str,
             operation: &'a str,
             arguments: &'a Value,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            max_response_bytes: Option<u64>,
         }
         let body = encode_bounded(
             &Request {
@@ -386,6 +459,7 @@ impl Client {
                 id: attempt,
                 operation,
                 arguments: &arguments,
+                max_response_bytes,
             },
             65536,
         )
@@ -401,7 +475,7 @@ impl Client {
         if response.attempt_id != attempt
             || !(200..300).contains(&response.status)
             || !valid_digest(&response.sha256)
-            || response.byte_length > 2 << 20
+            || response.byte_length > max_response_bytes.unwrap_or(2 << 20).min(2 << 20)
         {
             return Err(ClientError::Response);
         }

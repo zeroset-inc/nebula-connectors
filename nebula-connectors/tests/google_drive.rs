@@ -129,7 +129,7 @@ async fn a_file_that_cannot_be_exported_fails_alone_and_the_inventory_completes(
     let huge = of_object(&events, "D2");
     assert_eq!(
         (huge[0]["outcome"].as_str(), huge[0]["reason"].as_str()),
-        (Some("skipped"), Some("unsupported"))
+        (Some("skipped"), Some("too_large"))
     );
 }
 
@@ -219,4 +219,60 @@ async fn losing_access_to_the_folder_fails_the_run() {
             nebula_connector_sdk::ConnectorError::Permission
         ))
     ));
+}
+
+#[tokio::test]
+async fn engine_denial_skips_download_and_unknown_export_uses_the_engine_bound() {
+    let mut export = file("D1", "Plan", "application/vnd.google-apps.document", "12");
+    export["size"] = "9000000".into();
+    let server = Server::start(
+        "google_drive",
+        vec![
+            about(),
+            listing(
+                vec![file("T1", "oversize.txt", "text/plain", "1"), export],
+                "",
+            ),
+            json!("exported text"),
+        ],
+        json!({"containers":["F1"]}),
+    )
+    .await;
+    server
+        .eligibility_for(
+            "oversize.txt",
+            json!({"eligible":false,"max_bytes":32,"reason":"too_large"}),
+        )
+        .await;
+    server
+        .eligibility_for(
+            "Plan",
+            json!({"eligible":true,"max_bytes":32,"reason":null}),
+        )
+        .await;
+
+    server.run(&GoogleDrive).await.unwrap();
+
+    let operations = server.operations().await;
+    assert_eq!(
+        operations
+            .iter()
+            .map(|(op, _)| op.as_str())
+            .collect::<Vec<_>>(),
+        ["about.get", "files.list", "files.export"]
+    );
+    let events = server.events().await;
+    let skipped = of_object(&events, "T1");
+    assert_eq!(skipped[0]["reason"], "too_large");
+    assert_eq!(skipped[1]["type"], "presence");
+    assert_eq!(of_object(&events, "D1")[1]["metadata"]["filename"], "Plan");
+    let requests = server.eligibility_requests().await;
+    assert_eq!(
+        requests[1],
+        json!({"fence":1,"filename":"Plan","content_type":"text/plain","size_bytes":null})
+    );
+    assert_eq!(
+        server.provider_requests().await[2]["max_response_bytes"],
+        32
+    );
 }

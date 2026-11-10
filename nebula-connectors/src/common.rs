@@ -34,14 +34,24 @@ pub(crate) async fn broker_read(
     operation: &str,
     arguments: Value,
 ) -> std::result::Result<ProviderResponse, ClientError> {
+    broker_read_bounded(context, operation, arguments, None).await
+}
+
+pub(crate) async fn broker_read_bounded(
+    context: &Context,
+    operation: &str,
+    arguments: Value,
+    max_bytes: Option<u64>,
+) -> std::result::Result<ProviderResponse, ClientError> {
     for attempt in 0..3 {
         let error = match context
             .service
-            .provider(
+            .provider_bounded(
                 &context.run,
                 &Uuid::new_v4().to_string(),
                 operation,
                 arguments.clone(),
+                max_bytes,
             )
             .await
         {

@@ -2,7 +2,11 @@
 // Each test crate compiles this module and uses part of it.
 #![allow(dead_code)]
 
-use std::{collections::VecDeque, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+    time::Duration,
+};
 
 use axum::{
     Json, Router,
@@ -20,6 +24,8 @@ pub struct StateData {
     authority: &'static str,
     replies: VecDeque<Value>,
     requests: Vec<Value>,
+    eligibility: HashMap<String, Value>,
+    eligibility_requests: Vec<Value>,
     batches: Vec<Value>,
     run: Run,
     scope: Value,
@@ -56,6 +62,8 @@ impl Server {
             authority,
             replies: replies.into(),
             requests: vec![],
+            eligibility: HashMap::new(),
+            eligibility_requests: vec![],
             batches: vec![],
             run: Run {
                 limits: nebula_connector_sdk::client::ProtocolLimits::V1,
@@ -78,6 +86,10 @@ impl Server {
             .route(base, get(connection))
             .route(&format!("{base}/runs"), post(begin))
             .route(&format!("{base}/runs/run/requests"), post(provider))
+            .route(
+                &format!("{base}/runs/run/source-eligibility"),
+                post(eligibility),
+            )
             .route(&format!("{base}/runs/run/batches"), post(accept))
             .with_state(state.clone());
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -121,6 +133,22 @@ impl Server {
             .collect()
     }
 
+    pub async fn eligibility_for(&self, filename: &str, decision: Value) {
+        self.state
+            .lock()
+            .await
+            .eligibility
+            .insert(filename.into(), decision);
+    }
+
+    pub async fn eligibility_requests(&self) -> Vec<Value> {
+        self.state.lock().await.eligibility_requests.clone()
+    }
+
+    pub async fn provider_requests(&self) -> Vec<Value> {
+        self.state.lock().await.requests.clone()
+    }
+
     pub async fn operations(&self) -> Vec<(String, Value)> {
         let state = self.state.lock().await;
         state
@@ -147,6 +175,21 @@ async fn connection(State(state): State<Arc<Mutex<StateData>>>) -> Json<Value> {
 
 async fn begin(State(state): State<Arc<Mutex<StateData>>>) -> Json<Run> {
     Json(state.lock().await.run.clone())
+}
+
+async fn eligibility(
+    State(state): State<Arc<Mutex<StateData>>>,
+    Json(request): Json<Value>,
+) -> Json<Value> {
+    let mut state = state.lock().await;
+    state.eligibility_requests.push(request.clone());
+    Json(
+        state
+            .eligibility
+            .get(request["filename"].as_str().unwrap())
+            .cloned()
+            .unwrap_or_else(|| json!({"eligible":true,"max_bytes":196608,"reason":null})),
+    )
 }
 
 async fn provider(
