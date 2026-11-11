@@ -290,7 +290,13 @@ async fn read(context: &Context, value: &Value) -> Result<Page> {
     let messages = response["messages"]
         .as_array()
         .ok_or(ConnectorError::Response)?;
-    if messages.len() > PAGE_SIZE {
+    // conversations.replies can return the thread's parent on top of `limit` replies.
+    let parent = thread.as_deref().is_some_and(|thread| {
+        messages
+            .iter()
+            .any(|message| message["ts"].as_str() == Some(thread))
+    });
+    if messages.len() > PAGE_SIZE + usize::from(parent) {
         return Err(ConnectorError::Response);
     }
     let next = next_cursor(&response, previous)?;

@@ -552,6 +552,43 @@ async fn a_foreign_thread_or_failed_thread_read_cannot_seal_the_channel() {
 }
 
 #[tokio::test]
+async fn a_full_thread_page_may_carry_its_parent_beyond_the_reply_limit() {
+    let thread = "1700000000.000001";
+    let reply = |i: usize| {
+        let mut reply = message(&format!("1700000001.{i:06}"), "reply");
+        reply["thread_ts"] = thread.into();
+        reply
+    };
+    let cursor = json!({"threads":[thread],"history_done":true});
+    let full: Vec<_> = std::iter::once(message(thread, "parent"))
+        .chain((0..15).map(reply))
+        .collect();
+    let server = Server::start(vec![page(full, "")], json!({"containers":["C1"]})).await;
+    let page_read = Slack.read(&server.context().await, &cursor).await.unwrap();
+    let events = wire(&page_read);
+    assert_eq!(events.len(), 30, "fifteen replies, the parent excluded");
+    assert!(
+        events
+            .iter()
+            .all(|e| e["source"]["object_id"] != format!("C1:{thread}"))
+    );
+    assert!(page_read.complete);
+
+    let too_many: Vec<_> = std::iter::once(message(thread, "parent"))
+        .chain((0..16).map(reply))
+        .collect();
+    let repeated_parent: Vec<_> = [message(thread, "parent"), message(thread, "parent")]
+        .into_iter()
+        .chain((0..14).map(reply))
+        .collect();
+    for messages in [too_many, (0..16).map(reply).collect(), repeated_parent] {
+        let server = Server::start(vec![page(messages, "")], json!({"containers":["C1"]})).await;
+        let result = Slack.read(&server.context().await, &cursor).await;
+        assert!(matches!(result, Err(ConnectorError::Response)));
+    }
+}
+
+#[tokio::test]
 async fn quota_retry_uses_a_fresh_attempt_without_advancing_the_provider_cursor() {
     let server = Server::start(
         vec![
