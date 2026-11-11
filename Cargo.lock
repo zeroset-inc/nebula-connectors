@@ -916,7 +916,7 @@ dependencies = [
 
 [[package]]
 name = "nebula-connector-sdk"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "async-trait",
  "jsonschema",
@@ -931,7 +931,7 @@ dependencies = [
 
 [[package]]
 name = "nebula-connectors"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "axum",
  "base64 0.22.1",
