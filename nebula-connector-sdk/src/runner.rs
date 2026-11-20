@@ -107,12 +107,18 @@ pub async fn run(
         )
         .await
     };
-    tokio::select! {
+    let result = tokio::select! {
         biased;
         result = execute => result,
         result = renewal => result,
         _ = tokio::time::sleep(MAX_RUN_TIME) => Err(Error::Limit),
+    };
+    if let Err(Error::Connector(failure)) = &result {
+        // Older services have no failure route; preserve the provider error and
+        // let lease expiry recover ownership if reporting is unavailable.
+        let _ = service.fail(&context.run, failure).await;
     }
+    result
 }
 
 fn decode_cursor(value: &Value, version: u32) -> Result<Value, Error> {
