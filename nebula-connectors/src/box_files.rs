@@ -220,6 +220,7 @@ async fn entry_events(
     let file = File {
         provider: "box",
         representation: REPRESENTATION,
+        originals: None,
         container: folder,
         folder: "",
         id,
@@ -231,8 +232,13 @@ async fn entry_events(
         modified_at_ms: time("modified_at")?,
         url: Some(&url),
     };
-    file_events(context, &file, observed_at_ms, |max_bytes| {
-        fetch_text(context, "files.content", json!({"file":id}), max_bytes)
+    file_events(context, &file, observed_at_ms, |read| {
+        fetch_text(
+            context,
+            "files.content",
+            json!({"file":id}),
+            read.max_bytes(),
+        )
     })
     .await
 }

@@ -20,8 +20,15 @@ fn item(id: &str, name: &str, mime_type: &str, size: u64) -> Value {
         "webUrl":format!("https://contoso.sharepoint.com/{id}")})
 }
 
+const DOCX: &str = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const XLSX: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+fn eligible(max_bytes: u64) -> Value {
+    json!({"eligible":true,"max_bytes":max_bytes,"reason":null})
+}
+
 #[tokio::test]
-async fn onedrive_reads_text_files_skips_office_files_and_subfolders_across_pages() {
+async fn onedrive_reads_text_transfers_office_files_and_leaves_subfolders_across_pages() {
     let server = Server::start_as(
         "onedrive",
         ACCOUNT,
@@ -30,11 +37,17 @@ async fn onedrive_reads_text_files_skips_office_files_and_subfolders_across_page
             json!({"value":[item("N1","notes.md","application/octet-stream",20),{"id":"S1","name":"Sub","folder":{"childCount":1}}],
                 "@odata.nextLink":"https://graph.microsoft.com/v1.0/me/drive/items/F1/children?$top=2&$skiptoken=p%3D2"}),
             json!("# Notes\nShip Friday"),
-            json!({"value":[item("W1","plan.docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document",4096)]}),
+            json!({"value":[item("W1","plan.docx",DOCX,4096)]}),
         ],
         json!({"containers":["F1"]}),
     )
     .await;
+    server
+        .eligibility_for("plan.docx", eligible(64 << 20))
+        .await;
+    server
+        .transfer_for("plan.docx", json!({"byte_length":4100}))
+        .await;
 
     assert_eq!(server.run(&OneDrive).await.unwrap().state, "sealed");
     let operations = server.operations().await;
@@ -48,7 +61,8 @@ async fn onedrive_reads_text_files_skips_office_files_and_subfolders_across_page
             "items.children",
             "items.content",
             "items.children"
-        ]
+        ],
+        "an original never passes through a provider request"
     );
     assert_eq!(operations[2].1, json!({"file":"N1"}));
     assert_eq!(operations[3].1["skiptoken"], "p=2");
@@ -61,11 +75,40 @@ async fn onedrive_reads_text_files_skips_office_files_and_subfolders_across_page
         of_object(&events, "S1").is_empty(),
         "subfolders are selected on their own"
     );
+
     let word = of_object(&events, "W1");
+    let transfers = server.transfer_requests().await;
+    assert_eq!(transfers.len(), 1);
     assert_eq!(
-        (word[0]["reason"].as_str(), word[1]["type"].as_str()),
-        (Some("unsupported"), Some("presence"))
+        (
+            &transfers[0]["operation"],
+            &transfers[0]["arguments"],
+            &transfers[0]["object_id"],
+            &transfers[0]["filename"],
+            &transfers[0]["content_type"],
+            &transfers[0]["max_response_bytes"],
+        ),
+        (
+            &json!("items.original"),
+            &json!({"file":"W1"}),
+            &json!("W1"),
+            &json!("plan.docx"),
+            &json!(DOCX),
+            &json!(64 << 20),
+        )
     );
+    assert_eq!(transfers[0]["revision"], word[1]["source"]["revision"]);
+    assert_eq!(
+        (word[0]["outcome"].as_str(), word[0]["sha256"].as_str()),
+        (Some("fetched"), Some("a".repeat(64).as_str()))
+    );
+    assert_eq!(word[1]["type"], "upsert");
+    assert_eq!(
+        word[1]["content"],
+        json!({"kind":"file","upload_id":"upload-W1","sha256":"a".repeat(64),"byte_length":4100,
+            "filename":"plan.docx","media_type":DOCX,"representation":"original"})
+    );
+    assert_eq!(word[1]["metadata"]["filename"], "plan.docx");
 }
 
 #[tokio::test]
@@ -201,6 +244,239 @@ async fn a_library_whose_open_folders_outgrow_the_checkpoint_fails_the_scan() {
             .iter()
             .all(|event| event["type"] != "snapshot_complete"),
         "an unfinished library must not complete the inventory"
+    );
+}
+
+#[tokio::test]
+async fn sharepoint_transfers_what_the_engine_accepts_and_explains_what_it_leaves() {
+    let server = Server::start_as(
+        "sharepoint",
+        ACCOUNT,
+        vec![
+            me(),
+            json!({"value":[item("P1","deck.pdf","application/pdf",5 << 20),item("L1","log.txt","text/plain",311_000)],
+                "@odata.nextLink":"https://graph.microsoft.com/v1.0/drives/b!lib1/root/children?$top=2&$skiptoken=2"}),
+            json!({"value":[item("X1","budget.xlsx",XLSX,9000),item("B1","scan.pdf","application/pdf",9 << 30)],
+                "@odata.nextLink":"https://graph.microsoft.com/v1.0/drives/b!lib1/root/children?$top=2&$skiptoken=3"}),
+            json!({"value":[item("G1","grown.pdf","application/pdf",1000),item("D1","denied.docx",DOCX,1000)],
+                "@odata.nextLink":"https://graph.microsoft.com/v1.0/drives/b!lib1/root/children?$top=2&$skiptoken=4"}),
+            json!({"value":[item("O1","old-service.docx",DOCX,1000)]}),
+        ],
+        json!({"containers":["b!lib1"]}),
+    )
+    .await;
+    for name in ["deck.pdf", "log.txt", "grown.pdf"] {
+        server.eligibility_for(name, eligible(2_500_000_000)).await;
+    }
+    server
+        .eligibility_for(
+            "budget.xlsx",
+            json!({"eligible":false,"max_bytes":1,"reason":"table_import_required"}),
+        )
+        .await;
+    server
+        .eligibility_for(
+            "scan.pdf",
+            json!({"eligible":false,"max_bytes":2_500_000_000u64,"reason":"too_large"}),
+        )
+        .await;
+    server
+        .transfer_for("log.txt", json!({"byte_length":311_000}))
+        .await;
+    server
+        .transfer_for(
+            "grown.pdf",
+            json!({"provider_status":0,"code":"response_limit"}),
+        )
+        .await;
+    server
+        .transfer_for(
+            "denied.docx",
+            json!({"provider_status":403,"code":"provider_rejected"}),
+        )
+        .await;
+    server
+        .transfer_for("old-service.docx", json!({"status":404}))
+        .await;
+
+    assert_eq!(server.run(&SharePoint).await.unwrap().state, "sealed");
+    let events = server.events().await;
+    let outcome = |id: &str| {
+        let file = of_object(&events, id);
+        (
+            file[0]["outcome"].as_str().unwrap().to_owned(),
+            file[0]["reason"].as_str().unwrap().to_owned(),
+            file[1]["type"].as_str().unwrap().to_owned(),
+        )
+    };
+    let expect = |outcome: &str, reason: &str, change: &str| {
+        (outcome.to_owned(), reason.to_owned(), change.to_owned())
+    };
+    assert_eq!(outcome("P1"), expect("fetched", "in_scope", "upsert"));
+    assert_eq!(outcome("L1"), expect("fetched", "in_scope", "upsert"));
+    assert_eq!(
+        outcome("X1"),
+        expect("skipped", "table_import_required", "presence")
+    );
+    assert_eq!(outcome("B1"), expect("skipped", "too_large", "presence"));
+    assert_eq!(outcome("G1"), expect("skipped", "too_large", "presence"));
+    assert_eq!(outcome("D1"), expect("failed", "access_denied", "presence"));
+    assert_eq!(outcome("O1"), expect("skipped", "unsupported", "presence"));
+
+    let log = of_object(&events, "L1");
+    assert_eq!(
+        (
+            &log[1]["content"]["media_type"],
+            &log[1]["content"]["byte_length"]
+        ),
+        (&json!("text/plain"), &json!(311_000)),
+        "a text file too large to read inline is stored as it is"
+    );
+    let transfers = server.transfer_requests().await;
+    assert_eq!(
+        transfers
+            .iter()
+            .map(|transfer| transfer["filename"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        [
+            "deck.pdf",
+            "log.txt",
+            "grown.pdf",
+            "denied.docx",
+            "old-service.docx"
+        ],
+        "a file the engine refuses is never downloaded"
+    );
+    assert_eq!(transfers[0]["operation"], "drives.items.original");
+    assert_eq!(
+        transfers[0]["arguments"],
+        json!({"file":"P1","drive":"b!lib1"})
+    );
+    assert!(
+        server
+            .operations()
+            .await
+            .iter()
+            .all(|(operation, _)| operation != "drives.items.content"),
+        "no original is read as text"
+    );
+}
+
+#[tokio::test]
+async fn a_file_keeps_one_revision_per_representation_until_its_content_changes() {
+    let revision_of = |size: u64, content_tag: &'static str| async move {
+        let mut file = item("L1", "log.txt", "text/plain", size);
+        file["cTag"] = content_tag.into();
+        let mut replies = vec![me(), json!({"value":[file]})];
+        if size <= 192 << 10 {
+            replies.push(json!("text"));
+        }
+        let server = Server::start_as(
+            "sharepoint",
+            ACCOUNT,
+            replies,
+            json!({"containers":["b!lib1"]}),
+        )
+        .await;
+        server.eligibility_for("log.txt", eligible(1 << 30)).await;
+        server.run(&SharePoint).await.unwrap();
+        let events = server.events().await;
+        of_object(&events, "L1")[0]["source"]["revision"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    let inline = revision_of(100, "c:1").await;
+    let stored = revision_of(300_000, "c:1").await;
+    assert_eq!(revision_of(300_000, "c:1").await, stored);
+    assert_ne!(revision_of(300_000, "c:2").await, stored);
+    assert_ne!(
+        inline, stored,
+        "text read inline and the stored original are different representations"
+    );
+}
+
+/// Runs OneDrive over one folder that holds the files named, each a PDF the
+/// engine takes, and returns the transfer requests and each file's outcome,
+/// reason and change.
+async fn transferred(answers: &[(&str, Value)]) -> (Vec<Value>, Vec<(String, String, String)>) {
+    let files = answers
+        .iter()
+        .map(|(name, _)| item(name, name, "application/pdf", 4096))
+        .collect::<Vec<_>>();
+    let server = Server::start_as(
+        "onedrive",
+        ACCOUNT,
+        vec![me(), json!({"value":files})],
+        json!({"containers":["F1"]}),
+    )
+    .await;
+    for (name, answer) in answers {
+        server.eligibility_for(name, eligible(64 << 20)).await;
+        server.transfer_for(name, answer.clone()).await;
+    }
+    assert_eq!(server.run(&OneDrive).await.unwrap().state, "sealed");
+    let events = server.events().await;
+    let outcomes = answers
+        .iter()
+        .map(|(name, _)| {
+            let file = of_object(&events, name);
+            let text = |value: &Value| value.as_str().unwrap().to_owned();
+            (
+                text(&file[0]["outcome"]),
+                text(&file[0]["reason"]),
+                text(&file[1]["type"]),
+            )
+        })
+        .collect();
+    (server.transfer_requests().await, outcomes)
+}
+
+#[tokio::test]
+async fn an_upload_the_engine_has_not_verified_is_named_instead_of_read_again() {
+    let (requests, outcomes) = transferred(&[(
+        "slow.pdf",
+        json!([{"unverified":"upload-slow"},{"unverified":"upload-slow"},{"byte_length":4096}]),
+    )])
+    .await;
+    assert_eq!(
+        requests
+            .iter()
+            .map(|request| request["upload_id"].as_str())
+            .collect::<Vec<_>>(),
+        [None, Some("upload-slow"), Some("upload-slow")]
+    );
+    assert_ne!(requests[0]["id"], requests[1]["id"]);
+    assert_eq!(
+        outcomes,
+        [("fetched".into(), "in_scope".into(), "upsert".into())]
+    );
+}
+
+#[tokio::test]
+async fn a_busy_service_is_asked_again_and_a_failing_one_three_times() {
+    let busy = json!({"status":429,"retry_after":0});
+    let (requests, outcomes) = transferred(&[
+        (
+            "queued.pdf",
+            json!([busy, busy, busy, {"byte_length":4096}]),
+        ),
+        ("unlucky.pdf", json!({"status":503,"retry_after":0})),
+    ])
+    .await;
+    let asked = |name: &str| {
+        requests
+            .iter()
+            .filter(|request| request["filename"] == name)
+            .count()
+    };
+    assert_eq!((asked("queued.pdf"), asked("unlucky.pdf")), (4, 3));
+    assert_eq!(
+        outcomes,
+        [
+            ("fetched".into(), "in_scope".into(), "upsert".into()),
+            ("failed".into(), "fetch_failed".into(), "presence".into()),
+        ]
     );
 }
 

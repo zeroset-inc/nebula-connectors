@@ -252,6 +252,55 @@
    ]
   },
   {
+   "id": "drives.items.original",
+   "caller": "runner",
+   "method": "GET",
+   "host": "graph.microsoft.com",
+   "path": "/v1.0/drives/{drive}/items/{file}/content",
+   "arguments": {
+    "type": "object",
+    "properties": {
+     "drive": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     },
+     "file": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9!=_.,:@-]{1,512}$"
+     }
+    },
+    "required": [
+     "drive",
+     "file"
+    ],
+    "additionalProperties": false
+   },
+   "query": {},
+   "credential": "bearer",
+   "max_response_bytes": 67108864,
+   "timeout_seconds": 60,
+   "quotas": [
+    {
+     "namespace": "microsoft_graph",
+     "scope": "account",
+     "name": "sharepoint",
+     "cost": 1,
+     "capacity": 600,
+     "window_seconds": 60,
+     "concurrency": 4
+    }
+   ],
+   "response": "file",
+   "redirect_hosts": [
+    "*.sharepoint.com"
+   ],
+   "container_argument": "drive",
+   "resource_arguments": [
+    "drive",
+    "file"
+   ]
+  },
+  {
    "id": "setup.sites.root",
    "caller": "control",
    "method": "GET",

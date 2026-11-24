@@ -33,6 +33,11 @@ pub enum ClientError {
     Capacity,
 }
 
+/// Longest one request to the service takes: the service's 65-second
+/// deadline for a route that sends a provider request, and time to connect
+/// and to answer.
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(75);
+
 #[derive(Clone)]
 pub struct Client {
     http: reqwest::Client,
@@ -154,6 +159,50 @@ pub struct ProviderResponse {
     pub body: Value,
 }
 
+/// The revision of a provider file that a transfer stores.
+#[derive(Clone, Copy, Debug)]
+pub struct TransferFile<'a> {
+    pub object_id: &'a str,
+    pub revision: &'a str,
+    pub filename: &'a str,
+    pub content_type: &'a str,
+    /// The upload an earlier transfer of this revision in this run left
+    /// unverified. The service continues with it instead of reading the
+    /// provider again.
+    pub unverified_upload: Option<&'a str>,
+}
+
+/// An original file the service holds for this run. A file upsert refers to
+/// it by `upload_id`, `sha256` and `byte_length`.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Transfer {
+    pub attempt_id: String,
+    pub upload_id: String,
+    pub sha256: String,
+    pub byte_length: u64,
+}
+
+/// The service's answer to a transfer.
+#[derive(Debug)]
+pub enum Transferred {
+    /// The service holds the original for this run.
+    Held(Transfer),
+    /// The engine has the upload and has not verified it within the request.
+    /// A transfer that names it as `TransferFile::unverified_upload`, with a
+    /// fresh attempt ID, continues from there.
+    Unverified { upload_id: String },
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TransferReply {
+    attempt_id: String,
+    upload_id: String,
+    sha256: Option<String>,
+    byte_length: Option<u64>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SourceEligibility {
@@ -233,7 +282,7 @@ impl Client {
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(Duration::from_secs(10))
-            .timeout(Duration::from_secs(75))
+            .timeout(REQUEST_TIMEOUT)
             .build()
             .map_err(|_| ClientError::Configuration)?;
         Ok(Self {
@@ -482,6 +531,70 @@ impl Client {
         Ok(response)
     }
 
+    /// Has the broker read a provider file and store it as an original for
+    /// this run, without the bytes passing through the runner. `max_bytes`
+    /// narrows the size the operation approves, as the engine's eligibility
+    /// answer does. A revision the connection already stored is answered
+    /// with that original, without a read. The service answers within its
+    /// usual request deadline: an upload the engine has not verified by then
+    /// comes back as `Transferred::Unverified`. Like a provider attempt, a
+    /// transfer is never silently retried: an uncertain result requires a
+    /// fresh attempt ID.
+    pub async fn transfer(
+        &self,
+        run: &Run,
+        attempt: &str,
+        operation: &str,
+        arguments: Value,
+        file: TransferFile<'_>,
+        max_bytes: Option<u64>,
+    ) -> Result<Transferred, ClientError> {
+        if max_bytes == Some(0) {
+            return Err(ClientError::Configuration);
+        }
+        validate_id(attempt)?;
+        let mut request = json!({
+            "fence":run.fence,"id":attempt,"operation":operation,"arguments":arguments,
+            "object_id":file.object_id,"revision":file.revision,
+            "filename":file.filename,"content_type":file.content_type,
+        });
+        if let Some(limit) = max_bytes {
+            request["max_response_bytes"] = limit.into();
+        }
+        if let Some(upload) = file.unverified_upload {
+            request["upload_id"] = upload.into();
+        }
+        let body = encode_bounded(&request, 65536).map_err(|_| ClientError::Configuration)?;
+        let reply: TransferReply = self
+            .send(
+                Method::POST,
+                &["runs", &run.id, "transfers"],
+                Some(body),
+                8192,
+            )
+            .await?;
+        if reply.attempt_id != attempt || reply.upload_id.is_empty() || reply.upload_id.len() > 256
+        {
+            return Err(ClientError::Response);
+        }
+        match (reply.sha256, reply.byte_length) {
+            (None, None) => Ok(Transferred::Unverified {
+                upload_id: reply.upload_id,
+            }),
+            (Some(sha256), Some(byte_length))
+                if valid_digest(&sha256) && max_bytes.is_none_or(|limit| byte_length <= limit) =>
+            {
+                Ok(Transferred::Held(Transfer {
+                    attempt_id: reply.attempt_id,
+                    upload_id: reply.upload_id,
+                    sha256,
+                    byte_length,
+                }))
+            }
+            _ => Err(ClientError::Response),
+        }
+    }
+
     #[allow(
         clippy::disallowed_methods,
         reason = "Audited transport: bounded concurrency, timeout and response bytes; redirects disabled"
@@ -493,7 +606,8 @@ impl Client {
         body: Option<Vec<u8>>,
         limit: usize,
     ) -> Result<T, ClientError> {
-        let permits = if path.last() == Some(&"requests") {
+        let through_broker = matches!(path.last(), Some(&"requests" | &"transfers"));
+        let permits = if through_broker {
             &self.provider_permits
         } else {
             &self.control_permits
@@ -544,7 +658,7 @@ impl Client {
             bytes.extend_from_slice(&chunk);
         }
         if !status.is_success() {
-            if path.last() == Some(&"requests")
+            if through_broker
                 && crate::validation::check_json(&bytes, 0).is_ok()
                 && let Ok(failure) = serde_json::from_slice::<ProviderFailure>(&bytes)
                 && failure.attempt_id.len() <= 256

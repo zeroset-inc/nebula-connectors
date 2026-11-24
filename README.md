@@ -4,7 +4,8 @@ Apache-2.0 connector protocol, Rust SDK, provider adapters and shared control ru
 Connectors may use any language; the JSON Schema and shared fixtures define the wire contract.
 
 This is a foundation preview. The Slack adapter supports selected-channel inventories;
-file transfer, incremental synchronization and the remaining provider ports are incomplete.
+only OneDrive and SharePoint transfer original files, and incremental synchronization
+and the remaining provider ports are incomplete.
 Publishing this package does not activate a provider or deploy a Nebula service.
 
 `nebula-connector-sdk/schema/protocol-v1.json` is the canonical JSON Schema for
@@ -157,10 +158,19 @@ inside each selected folder. SharePoint inventories every file in each selected
 document library, listing a folder's subfolders before the rest of the level
 above, so a scan's checkpoint grows with the depth of the library and not with
 its size; a library too deep for the 64 KiB cursor fails the scan instead of
-completing a partial inventory. In both, plain, Markdown, CSV and HTML files are read as text up to 192 KiB,
-through Graph's download redirect, which the broker follows without the
-credential to the catalog's Microsoft hosts; Office and other files are skipped
-with presence until file transfer exists. Outlook reads every message in a
+completing a partial inventory. In both, plain, Markdown, CSV and HTML files
+of up to 192 KiB are read as text, through Graph's download redirect, which the
+broker follows without the credential to the catalog's Microsoft hosts. Every
+other selected file, such as a PDF, an Office document or a larger text file,
+is first checked with `source-eligibility`; one the engine accepts is stored
+as an original by a `transfers` request naming `items.original` or
+`drives.items.original`, and its upsert carries the upload the service holds.
+The broker reads the file and stores it; the bytes never reach the runner. A
+file the engine refuses is observed as skipped with the engine's reason
+(`too_large`, `table_import_required`) and is not downloaded. An original has
+its own source revision (`onedrive-file-v1`, `sharepoint-file-v1`), so a text
+file that grows past 192 KiB is replaced by its original. Against a service
+without the `transfers` route these files stay `unsupported`. Outlook reads every message in a
 selected mail folder as its plain text body behind its headers, up to 96 KiB.
 Teams reads a selected channel, named `team~channel`, one message at a time and
 then its replies; deleted messages are left out so the inventory withdraws them.
@@ -327,3 +337,23 @@ endpoint. They check the admitted representation before requesting provider
 content and narrow each broker response to the returned byte bound. The decision
 reserves no engine capacity; actual source bytes still undergo final validation.
 Service compatibility follows this contract, rather than the runner's release age.
+
+`Client::transfer` asks the service to store one provider file as an original:
+`POST …/runs/{run}/transfers` with the run fence, a fresh attempt ID, a catalog
+operation whose response is `file`, its arguments, the file's `object_id`,
+source `revision`, `filename` and `content_type`, and an optional
+`max_response_bytes` that narrows the operation's limit. The reply names the
+`upload_id` the service holds for the run with its `sha256` and `byte_length`;
+a file upsert in the same run refers to exactly those. A revision the
+connection already stored is answered with that original, without a read, so
+an unchanged file is not transferred again. A provider refusal is reported as
+for `requests`. The service answers within its usual request deadline: 202
+with an `upload_id` means the engine has the upload and has not verified it
+yet (`Transferred::Unverified`), and a transfer that names it as
+`TransferFile::unverified_upload` under a fresh attempt ID continues there
+instead of reading the provider again. 429 means every transfer slot of the
+replica is busy, 422 that the engine does not take the file, and 424 that it
+cannot be stored for this run. The Microsoft file adapters ask a busy service
+again for up to one request timeout (75 seconds), doubling the pause it asks
+for each time and asking once more as that time ends, and retry other
+failures three times as provider reads do.
