@@ -85,6 +85,9 @@ pub(crate) struct File<'a> {
     pub(crate) provider: &'a str,
     pub(crate) representation: &'a str,
     pub(crate) container: &'a str,
+    /// The folders between the container and the file, such as
+    /// "Reports/2026"; empty for a file directly inside the container.
+    pub(crate) folder: &'a str,
     pub(crate) id: &'a str,
     pub(crate) name: &'a str,
     /// The provider's media type, when it reports one.
@@ -101,6 +104,14 @@ pub(crate) struct File<'a> {
 impl File<'_> {
     pub(crate) fn media_type(&self) -> Option<&'static str> {
         text_type(self.mime_type.unwrap_or_default(), self.name)
+    }
+
+    fn path(&self) -> String {
+        if self.folder.is_empty() {
+            format!("{}/{}", self.container, self.name)
+        } else {
+            format!("{}/{}/{}", self.container, self.folder, self.name)
+        }
     }
 }
 
@@ -132,7 +143,7 @@ where
         .mime_type
         .or(media_type)
         .unwrap_or("application/octet-stream");
-    let mut metadata = json!({"container_id":file.container,"path":format!("{}/{}", file.container, file.name),
+    let mut metadata = json!({"container_id":file.container,"path":file.path(),
         "content_type":content_type.chars().take(256).collect::<String>(),"modified_at_ms":file.modified_at_ms});
     if let Some(created) = file.created_at_ms {
         metadata["created_at_ms"] = created.into();

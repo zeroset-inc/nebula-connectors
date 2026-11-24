@@ -153,8 +153,11 @@ component tests use the same HTTP service stub; they are not live Gmail tests.
 
 The Microsoft 365 ports read through Microsoft Graph for a work account,
 whose authority is its Entra object ID. OneDrive inventories the files directly
-inside each selected folder and SharePoint the top of each selected document
-library: plain, Markdown, CSV and HTML files are read as text up to 192 KiB,
+inside each selected folder. SharePoint inventories every file in each selected
+document library, listing a folder's subfolders before the rest of the level
+above, so a scan's checkpoint grows with the depth of the library and not with
+its size; a library too deep for the 64 KiB cursor fails the scan instead of
+completing a partial inventory. In both, plain, Markdown, CSV and HTML files are read as text up to 192 KiB,
 through Graph's download redirect, which the broker follows without the
 credential to the catalog's Microsoft hosts; Office and other files are skipped
 with presence until file transfer exists. Outlook reads every message in a
@@ -229,7 +232,11 @@ a request with its response returns normalized resources and a parent/query-boun
 cursor. The broker executes every HTTP request and retains credentials, quotas
 and journaling. Provider bodies and normalized results each have a 2 MiB budget;
 the input RPC allows another 32 KiB for context. Slack search continues for at
-most five pages or until 200 matches; other pickers return one provider page.
+most five pages or until 200 matches. The SharePoint site picker reads the
+tenant's root site with `setup.sites.root` and continues into
+`setup.sites.search`, so the root site and its libraries stay reachable when
+Graph's site search fails; the search page leaves out the root site it already
+listed. Other pickers return one provider page.
 An empty filtered page retains its cursor. This setup API is separate from the
 runner's `discover`, which describes already-selected resources.
 

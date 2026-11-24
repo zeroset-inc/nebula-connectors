@@ -4,6 +4,79 @@ use serde_json::{Value, json};
 fn graph_id(id: &str) -> bool {
     id.len() <= 512 && !id.contains('~') && crate::graph::graph_id(id)
 }
+
+/// In a SharePoint site cursor, the root site already listed, or empty when
+/// the query left it out. Its presence marks the pages that come from search.
+const ROOT_SITE: &str = "root";
+
+type Paging = std::collections::BTreeMap<String, String>;
+
+fn listing_sites(provider: &str, parent: &str) -> bool {
+    provider == "sharepoint" && parent.is_empty()
+}
+
+/// The root site's page is followed at once by the search, so one request
+/// lists both.
+pub(super) fn continue_scan(
+    provider: &str,
+    input: &super::Request,
+    listed: &str,
+    cursor: &str,
+) -> bool {
+    listing_sites(provider, &input.parent)
+        && listed.is_empty()
+        && !cursor.is_empty()
+        && input.pages + 1 < super::MAX_PAGES
+}
+
+/// The site picker's pages: the tenant's root site, then the sites Graph's
+/// search finds. That search can fail for a whole tenant, and the root site
+/// and its libraries stay reachable through the first page.
+fn sites(query: &str, listed: &str, value: &Value) -> Result<(Vec<Resource>, String)> {
+    let site = |row: &Value| {
+        let id = text(row, "id");
+        let label = if text(row, "displayName").is_empty() {
+            text(row, "name")
+        } else {
+            text(row, "displayName")
+        };
+        (graph_id(id) && label_valid(label)).then(|| resource(id, label, "site", "", true, false))
+    };
+    let mut items = vec![];
+    let mut paging = Paging::new();
+    if listed.is_empty() {
+        let named =
+            matches(text(value, "displayName"), query) || matches(text(value, "name"), query);
+        let root = site(value).filter(|_| named);
+        paging.insert(
+            ROOT_SITE.into(),
+            root.as_ref()
+                .map(|site| site.id.clone())
+                .unwrap_or_default(),
+        );
+        items.extend(root);
+    } else {
+        let previous: Paging = serde_json::from_str(listed).map_err(|_| Error::InvalidCursor)?;
+        let root = previous.get(ROOT_SITE).ok_or(Error::InvalidCursor)?;
+        items.extend(
+            rows(value, "value")?
+                .iter()
+                .filter_map(site)
+                .filter(|site| site.id != *root),
+        );
+        let link = text(value, "@odata.nextLink");
+        if link.is_empty() {
+            return Ok((items, String::new()));
+        }
+        paging = next_query(link, &["$skiptoken", "$skip"])?;
+        if paging.is_empty() {
+            return Err(Error::Unavailable);
+        }
+        paging.insert(ROOT_SITE.into(), root.clone());
+    }
+    let next = serde_json::to_string(&paging).map_err(|_| Error::Unavailable)?;
+    Ok((items, next))
+}
 pub(super) fn plan(
     provider: &str,
     parent: &str,
@@ -28,6 +101,9 @@ pub(super) fn plan(
             }
         }
         "sharepoint" => {
+            if parent.is_empty() && next.is_empty() {
+                return operation("setup.sites.root", json!({"select":"id,displayName,name"}));
+            }
             if parent.is_empty() {
                 (
                     "setup.sites.search",
@@ -68,9 +144,16 @@ pub(super) fn plan(
         _ => return Err(Error::Unavailable),
     };
     if !next.is_empty() {
-        let paging: std::collections::BTreeMap<String, String> =
-            serde_json::from_str(next).map_err(|_| Error::InvalidCursor)?;
-        if paging.is_empty() || paging.len() > 2 {
+        let mut paging: Paging = serde_json::from_str(next).map_err(|_| Error::InvalidCursor)?;
+        if listing_sites(provider, parent) {
+            let root = paging.remove(ROOT_SITE).ok_or(Error::InvalidCursor)?;
+            if !root.is_empty() && !graph_id(&root) {
+                return Err(Error::InvalidCursor);
+            }
+        } else if paging.is_empty() {
+            return Err(Error::InvalidCursor);
+        }
+        if paging.len() > 2 {
             return Err(Error::InvalidCursor);
         }
         for (key, value) in paging {
@@ -90,9 +173,12 @@ pub(super) fn interpret(
     provider: &str,
     parent: &str,
     query: &str,
-    _page_token: &str,
+    page_token: &str,
     value: &Value,
 ) -> Result<(Vec<Resource>, String)> {
+    if listing_sites(provider, parent) {
+        return sites(query, page_token, value);
+    }
     let mut items = vec![];
     let mut next = String::new();
     match provider {
@@ -119,9 +205,6 @@ pub(super) fn interpret(
                             row["folder"]["childCount"].as_u64().unwrap_or(0) > 0,
                             true,
                         ))
-                    }
-                    "sharepoint" if parent.is_empty() => {
-                        Some(resource(id, label, "site", "", true, false))
                     }
                     "sharepoint" if matches(text(row, "name"), query) => Some(resource(
                         id,

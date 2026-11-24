@@ -133,6 +133,128 @@ fn request_version_and_provider_response_bounds_are_enforced() {
 }
 
 #[test]
+fn sharepoint_offers_the_root_site_before_searching_for_the_rest() {
+    let planned = process("sharepoint", request("", "", "", None))
+        .unwrap()
+        .operation
+        .unwrap();
+    assert_eq!(planned.name, "setup.sites.root");
+    assert_eq!(planned.arguments, json!({"select":"id,displayName,name"}));
+
+    let root = r#"{"id":"contoso.sharepoint.com,1,2","displayName":"Communication site","name":"contoso"}"#;
+    let first = process("sharepoint", request("", "", "", Some(root)))
+        .unwrap()
+        .page
+        .unwrap();
+    assert_eq!(first.items.len(), 1);
+    assert_eq!(first.items[0].id, "contoso.sharepoint.com,1,2");
+    assert_eq!(first.items[0].name, "Communication site");
+    assert!(first.items[0].has_children && !first.items[0].selectable);
+    assert!(
+        first.continue_scan,
+        "one request lists the root site and the search results"
+    );
+
+    let planned = process("sharepoint", request("", "", &first.cursor, None))
+        .unwrap()
+        .operation
+        .unwrap();
+    assert_eq!(planned.name, "setup.sites.search");
+    assert_eq!(
+        planned.arguments,
+        json!({"search":"*","select":"id,displayName,name","top":"100"})
+    );
+
+    let found = r#"{"value":[{"id":"contoso.sharepoint.com,1,2","displayName":"Communication site"},{"id":"contoso.sharepoint.com,3,4","displayName":"Marketing"}],"@odata.nextLink":"https://graph.microsoft.com/v1.0/sites?search=*&$skiptoken=s2"}"#;
+    let second = process("sharepoint", request("", "", &first.cursor, Some(found)))
+        .unwrap()
+        .page
+        .unwrap();
+    assert_eq!(
+        second
+            .items
+            .iter()
+            .map(|site| site.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Marketing"],
+        "the root site is listed once"
+    );
+    assert!(!second.continue_scan);
+    let planned = process("sharepoint", request("", "", &second.cursor, None))
+        .unwrap()
+        .operation
+        .unwrap();
+    assert_eq!(planned.arguments["skiptoken"], "s2");
+    let last = process(
+        "sharepoint",
+        request("", "", &second.cursor, Some(r#"{"value":[]}"#)),
+    )
+    .unwrap()
+    .page
+    .unwrap();
+    assert!(last.items.is_empty() && last.cursor.is_empty());
+}
+
+#[test]
+fn a_sharepoint_site_search_leaves_out_a_root_site_it_does_not_name() {
+    let root = r#"{"id":"contoso.sharepoint.com,1,2","displayName":"Communication site","name":"contoso"}"#;
+    let first = process("sharepoint", request("", "market", "", Some(root)))
+        .unwrap()
+        .page
+        .unwrap();
+    assert!(first.items.is_empty());
+    assert!(first.continue_scan);
+    let planned = process("sharepoint", request("", "market", &first.cursor, None))
+        .unwrap()
+        .operation
+        .unwrap();
+    assert_eq!(planned.arguments["search"], "market");
+
+    let named = process("sharepoint", request("", "CONTOSO", "", Some(root)))
+        .unwrap()
+        .page
+        .unwrap();
+    assert_eq!(named.items.len(), 1);
+}
+
+#[test]
+fn a_sharepoint_site_cursor_must_name_the_root_page_it_follows() {
+    let cursor = |next: &str| {
+        URL_SAFE_NO_PAD.encode(
+            serde_json::to_vec(&Cursor {
+                version: 1,
+                provider: "sharepoint".into(),
+                parent: String::new(),
+                query: String::new(),
+                next: next.into(),
+            })
+            .unwrap(),
+        )
+    };
+    for forged in [
+        r#"{"skiptoken":"s2"}"#,
+        r#"{"root":"not a site id"}"#,
+        r#"{"root":"","skiptoken":"s2","skip":"1","expand":"secrets"}"#,
+    ] {
+        assert_eq!(
+            process("sharepoint", request("", "", &cursor(forged), None))
+                .unwrap()
+                .error,
+            Some(Error::InvalidCursor),
+            "{forged}"
+        );
+    }
+    let libraries = process(
+        "sharepoint",
+        request("contoso.sharepoint.com,1,2", "", "", None),
+    )
+    .unwrap()
+    .operation
+    .unwrap();
+    assert_eq!(libraries.name, "setup.drives.list");
+}
+
+#[test]
 fn normalized_labels_do_not_inherit_a_provider_page_count_cap() {
     let labels = (0..1200)
         .map(|i| json!({"id":format!("Label_{i}"),"name":format!("Label {i}"),"type":"user"}))

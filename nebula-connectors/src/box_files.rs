@@ -221,6 +221,7 @@ async fn entry_events(
         provider: "box",
         representation: REPRESENTATION,
         container: folder,
+        folder: "",
         id,
         name,
         mime_type: None,

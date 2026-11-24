@@ -95,6 +95,116 @@ async fn sharepoint_reads_a_library_and_names_the_library_when_downloading() {
 }
 
 #[tokio::test]
+async fn sharepoint_reads_the_files_in_a_librarys_folders_deepest_first() {
+    let folder = |id: &str, name: &str| json!({"id":id,"name":name,"folder":{"childCount":1}});
+    let text = |id: &str, name: &str| item(id, name, "text/plain", 4);
+    let server = Server::start_as(
+        "sharepoint",
+        ACCOUNT,
+        vec![
+            me(),
+            json!({"value":[folder("D1","Reports"),text("T1","top.txt")],
+                "@odata.nextLink":"https://graph.microsoft.com/v1.0/drives/b!lib1/root/children?$top=2&$skiptoken=top2"}),
+            json!("top"),
+            json!({"value":[folder("D2","2026"),text("T2","summary.txt")],
+                "@odata.nextLink":"https://graph.microsoft.com/v1.0/drives/b!lib1/items/D1/children?$top=2&$skiptoken=reports2"}),
+            json!("summary"),
+            json!({"value":[text("T3","q1.txt")]}),
+            json!("q1"),
+            json!({"value":[text("T4","notes.txt")]}),
+            json!("notes"),
+            json!({"value":[text("T5","last.txt")]}),
+            json!("last"),
+        ],
+        json!({"containers":["b!lib1"]}),
+    )
+    .await;
+
+    assert_eq!(server.run(&SharePoint).await.unwrap().state, "sealed");
+    let listings = server
+        .operations()
+        .await
+        .into_iter()
+        .filter(|(operation, _)| operation.ends_with(".children"))
+        .map(|(operation, arguments)| {
+            (
+                operation,
+                arguments["folder"].as_str().map(str::to_owned),
+                arguments["skiptoken"].as_str().map(str::to_owned),
+            )
+        })
+        .collect::<Vec<_>>();
+    let listing = |operation: &str, folder: Option<&str>, page: Option<&str>| {
+        (
+            operation.to_owned(),
+            folder.map(str::to_owned),
+            page.map(str::to_owned),
+        )
+    };
+    assert_eq!(
+        listings,
+        [
+            listing("drives.root.children", None, None),
+            listing("drives.items.children", Some("D1"), None),
+            listing("drives.items.children", Some("D2"), None),
+            listing("drives.items.children", Some("D1"), Some("reports2")),
+            listing("drives.root.children", None, Some("top2")),
+        ]
+    );
+    let events = server.events().await;
+    for (id, path) in [
+        ("T1", "b!lib1/top.txt"),
+        ("T2", "b!lib1/Reports/summary.txt"),
+        ("T3", "b!lib1/Reports/2026/q1.txt"),
+        ("T4", "b!lib1/Reports/notes.txt"),
+        ("T5", "b!lib1/last.txt"),
+    ] {
+        let file = of_object(&events, id);
+        assert_eq!(file[0]["metadata"]["path"], path);
+        assert_eq!(file[0]["metadata"]["container_id"], "b!lib1");
+        assert_eq!(file[1]["type"], "upsert", "{id}");
+    }
+    assert!(of_object(&events, "D1").is_empty() && of_object(&events, "D2").is_empty());
+}
+
+#[tokio::test]
+async fn a_library_whose_open_folders_outgrow_the_checkpoint_fails_the_scan() {
+    let more = format!(
+        "https://graph.microsoft.com/v1.0/drives/b!lib1/root/children?$skiptoken={}",
+        "p".repeat(3900)
+    );
+    let mut replies = vec![me()];
+    for depth in 0..20 {
+        replies.push(json!({"value":[
+            {"id":format!("A{depth}"),"name":"a","folder":{"childCount":1}},
+            {"id":format!("B{depth}"),"name":"b","folder":{"childCount":1}}],
+            "@odata.nextLink":more}));
+    }
+    let server = Server::start_as(
+        "sharepoint",
+        ACCOUNT,
+        replies,
+        json!({"containers":["b!lib1"]}),
+    )
+    .await;
+
+    assert!(server.run(&SharePoint).await.is_err());
+    let listed = server.operations().await.len();
+    assert!(
+        (10..20).contains(&listed),
+        "the scan stops once its position passes the checkpoint bound, after {listed} requests"
+    );
+    assert!(
+        server
+            .events()
+            .await
+            .iter()
+            .all(|event| event["type"] != "snapshot_complete"),
+        "an unfinished library must not complete the inventory"
+    );
+}
+
+#[tokio::test]
 async fn a_signed_in_account_other_than_the_connection_stops_the_run() {
     let server = Server::start_as(
         "sharepoint",
