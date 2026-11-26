@@ -4,14 +4,14 @@ use std::future::Future;
 
 use nebula_connector_sdk::{
     ClientError, ConnectorError, Context,
-    client::ProviderFailureCode,
+    client::{ProviderFailureCode, Transfer, TransferFile},
     connector::stable_id,
     protocol::{ConnectorEvent, ItemMetadata},
     scope::Selection,
 };
 use serde_json::{Value, json};
 
-use crate::common::{Result, broker_read_bounded};
+use crate::common::{Result, broker_read_bounded, broker_transfer};
 
 /// Files per page. Each file costs two events and up to `MAX_TEXT_BYTES` of
 /// content, so two keep a page within the runner's 1 MiB batch.
@@ -37,8 +37,68 @@ pub(crate) fn text_type(mime_type: &str, name: &str) -> Option<&'static str> {
 
 pub(crate) enum Fetched {
     Text(String),
+    /// The file as the provider stores it, held by the service for this run.
+    Original(Transfer),
     Skipped(&'static str),
     Failed(&'static str),
+}
+
+/// What an adapter reads of a selected file.
+pub(crate) enum Read {
+    /// The file's text, of at most this many bytes.
+    Text(u64),
+    /// The file itself, stored as an original under this source revision.
+    Original { revision: String, max_bytes: u64 },
+}
+
+impl Read {
+    pub(crate) fn max_bytes(&self) -> u64 {
+        match self {
+            Self::Text(max_bytes) | Self::Original { max_bytes, .. } => *max_bytes,
+        }
+    }
+}
+
+/// Has the broker store a file as an original. A file over the limit is
+/// skipped, a refused token or a fenced run fails the run, a service that
+/// offers no transfers leaves the file unsupported, and any other refusal
+/// fails only this file.
+pub(crate) async fn transfer_original(
+    context: &Context,
+    operation: &str,
+    arguments: Value,
+    file: TransferFile<'_>,
+    max_bytes: u64,
+) -> Result<Fetched> {
+    Ok(
+        match broker_transfer(context, operation, arguments, file, max_bytes).await {
+            Ok(transfer) => Fetched::Original(transfer),
+            Err(ClientError::Provider(failure)) => match (failure.code, failure.provider_status) {
+                (ProviderFailureCode::ResponseLimit, _) => Fetched::Skipped("too_large"),
+                (_, 401) => return Err(ConnectorError::Permission),
+                (_, 403) => Fetched::Failed("access_denied"),
+                (_, 404 | 409) => Fetched::Failed("unavailable"),
+                _ => Fetched::Failed("fetch_failed"),
+            },
+            Err(ClientError::Rejected {
+                status: 404 | 405 | 422,
+                ..
+            }) => Fetched::Skipped("unsupported"),
+            Err(
+                error @ ClientError::Rejected {
+                    status: 401 | 403 | 409,
+                    ..
+                },
+            ) => return Err(error.into()),
+            Err(
+                ClientError::Rejected { .. }
+                | ClientError::Transport
+                | ClientError::Capacity
+                | ClientError::Response,
+            ) => Fetched::Failed("fetch_failed"),
+            Err(error) => return Err(error.into()),
+        },
+    )
 }
 
 /// Reads a text file through the broker. An unreadable or oversized reply
@@ -84,6 +144,9 @@ pub(crate) async fn fetch_text(
 pub(crate) struct File<'a> {
     pub(crate) provider: &'a str,
     pub(crate) representation: &'a str,
+    /// Names the revisions of files the adapter transfers as originals, such
+    /// as "sharepoint-file-v1". Without it the adapter reads only text.
+    pub(crate) originals: Option<&'a str>,
     pub(crate) container: &'a str,
     /// The folders between the container and the file, such as
     /// "Reports/2026"; empty for a file directly inside the container.
@@ -116,20 +179,26 @@ impl File<'_> {
 }
 
 /// The file's observation and, when it is selected, its change. `fetch`
-/// reads the content, and runs only for a selected text file within
-/// `MAX_TEXT_BYTES`.
+/// reads the content, and runs only for a selected file the engine accepts:
+/// a text file within `MAX_TEXT_BYTES` as text, and any other file as an
+/// original when the adapter transfers originals.
 pub(crate) async fn file_events<F>(
     context: &Context,
     file: &File<'_>,
     observed_at_ms: i64,
-    fetch: impl FnOnce(u64) -> F,
+    fetch: impl FnOnce(Read) -> F,
 ) -> Result<Vec<ConnectorEvent>>
 where
     F: Future<Output = Result<Fetched>>,
 {
     let media_type = file.media_type();
+    let reads_text = media_type.is_some() && file.size.is_none_or(|size| size <= MAX_TEXT_BYTES);
+    let representation = match file.originals {
+        Some(originals) if !reads_text => originals,
+        _ => file.representation,
+    };
     let revision = stable_id(
-        file.representation,
+        representation,
         &[file.id.as_bytes(), file.content_tag.as_bytes()],
     );
     let mut source = json!({"authority":context.authority,"object_id":file.id,"revision":revision});
@@ -167,27 +236,37 @@ where
         ],
     );
     // Content is read only for selected files, so an exclusion never fetches.
-    let fetched = match (selection, media_type) {
-        (Selection::Selected, Some(_)) if file.size.is_some_and(|size| size > MAX_TEXT_BYTES) => {
-            Fetched::Skipped("too_large")
-        }
-        (Selection::Selected, Some(_)) => {
-            let eligibility = context
-                .service
-                .source_eligibility(&context.run, file.name, content_type, file.size)
-                .await?;
-            match eligibility.reason {
-                Some(reason) => Fetched::Skipped(reason.as_str()),
-                None => fetch(eligibility.max_bytes.min(MAX_TEXT_BYTES)).await?,
+    let fetched = if selection != Selection::Selected {
+        Fetched::Skipped(selection.reason())
+    } else if !reads_text && file.originals.is_none() {
+        Fetched::Skipped(if media_type.is_some() {
+            "too_large"
+        } else {
+            "unsupported"
+        })
+    } else {
+        let eligibility = context
+            .service
+            .source_eligibility(&context.run, file.name, content_type, file.size)
+            .await?;
+        match eligibility.reason {
+            Some(reason) => Fetched::Skipped(reason.as_str()),
+            None if reads_text => {
+                fetch(Read::Text(eligibility.max_bytes.min(MAX_TEXT_BYTES))).await?
+            }
+            None => {
+                fetch(Read::Original {
+                    revision: revision.clone(),
+                    max_bytes: eligibility.max_bytes,
+                })
+                .await?
             }
         }
-        (Selection::Selected, None) => Fetched::Skipped("unsupported"),
-        (_, _) => Fetched::Skipped(selection.reason()),
     };
     let (outcome, reason) = match (&fetched, selection) {
         (_, Selection::Excluded) => ("skipped", selection.reason()),
         (_, Selection::MissingMetadata) => ("failed", selection.reason()),
-        (Fetched::Text(_), _) => ("fetched", "in_scope"),
+        (Fetched::Text(_) | Fetched::Original(_), _) => ("fetched", "in_scope"),
         (Fetched::Skipped(reason), _) => ("skipped", *reason),
         (Fetched::Failed(reason), _) => ("failed", *reason),
     };
@@ -196,6 +275,9 @@ where
         "scan_id":context.run.scan_id,"source":source,"observed_at_ms":observed_at_ms,
         "metadata":metadata,"selection":selection.selection(),"outcome":outcome,"reason":reason}),
     ];
+    if let Fetched::Original(transfer) = &fetched {
+        events[0]["sha256"] = transfer.sha256.as_str().into();
+    }
     if selection == Selection::Selected {
         let kind = if outcome == "fetched" {
             "upsert"
@@ -204,14 +286,25 @@ where
         };
         let mut change = json!({"type":kind,"change_id":stable_id(&format!("{}-change-v1", file.provider), &[observation_id.as_bytes(),kind.as_bytes()]),
             "observation_id":observation_id,"source":source,"observed_at_ms":observed_at_ms});
-        if let (Fetched::Text(text), Some(media_type)) = (fetched, media_type) {
+        let content = match (fetched, media_type) {
+            (Fetched::Text(text), Some(media_type)) => {
+                Some(json!({"kind":"text","text":text,"media_type":media_type,
+                "representation_version":file.representation}))
+            }
+            (Fetched::Original(transfer), _) => {
+                Some(json!({"kind":"file","upload_id":transfer.upload_id,
+                "sha256":transfer.sha256,"byte_length":transfer.byte_length,"filename":file.name,
+                "media_type":content_type.chars().take(256).collect::<String>(),"representation":"original"}))
+            }
+            _ => None,
+        };
+        if let Some(content) = content {
             change["permissions"] = json!({"state":"unavailable"});
             change["metadata"] = json!({"provider":file.provider,"item_id":file.id,"name":file.name,"filename":file.name,"container_id":file.container});
             if let Some(mime_type) = file.mime_type {
                 change["metadata"]["mime_type"] = mime_type.into();
             }
-            change["content"] = json!({"kind":"text","text":text,"media_type":media_type,
-                "representation_version":file.representation});
+            change["content"] = content;
         }
         events.push(change);
     }

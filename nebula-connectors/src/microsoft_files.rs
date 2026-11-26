@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use nebula_connector_sdk::{
     Connector, ConnectorError, Context, Page, Specification,
+    client::TransferFile,
     connector::{Capabilities, Resource, ResourcePage},
     protocol::ConnectorEvent,
 };
@@ -10,7 +11,7 @@ use serde_json::{Value, json};
 
 use crate::{
     common::{Response, Result, observed_now, request},
-    files::{File, PAGE_SIZE, fetch_text, file_events},
+    files::{File, PAGE_SIZE, Read, fetch_text, file_events, transfer_original},
     graph::{check_account, graph_id, graph_time, next_page, page_arguments, validate_context},
 };
 
@@ -29,7 +30,10 @@ struct Files {
     /// selected on their own, as Drive's are.
     folder_children: Option<&'static str>,
     content: &'static str,
+    /// Has the broker store a file as an original.
+    original: &'static str,
     representation: &'static str,
+    original_representation: &'static str,
 }
 
 const ONEDRIVE: Files = Files {
@@ -40,7 +44,9 @@ const ONEDRIVE: Files = Files {
     children: "items.children",
     folder_children: None,
     content: "items.content",
+    original: "items.original",
     representation: "onedrive-text-v1",
+    original_representation: "onedrive-file-v1",
 };
 
 const SHAREPOINT: Files = Files {
@@ -51,13 +57,15 @@ const SHAREPOINT: Files = Files {
     children: "drives.root.children",
     folder_children: Some("drives.items.children"),
     content: "drives.items.content",
+    original: "drives.items.original",
     representation: "sharepoint-text-v1",
+    original_representation: "sharepoint-file-v1",
 };
 
 /// Managed OneDrive inventories: the files directly inside each selected
-/// folder. Plain, Markdown, CSV and HTML files are read as text, up to
-/// 192 KiB; Office documents and other files are observed as unsupported
-/// until file transfer exists.
+/// folder. Plain, Markdown, CSV and HTML files of up to 192 KiB are read as
+/// text. Every other file the engine accepts, such as a PDF, an Office
+/// document or a larger text file, is stored as an original by the broker.
 pub struct OneDrive;
 
 /// Managed SharePoint inventories: every file in each selected document
@@ -236,7 +244,7 @@ fn specification(files: &Files) -> Specification {
             incremental: false,
             complete_inventory: true,
             permissions: false,
-            original_files: false,
+            original_files: true,
             supported_filters: ["container", "content_type", "created_at", "modified_at"]
                 .map(str::to_owned)
                 .into(),
@@ -388,6 +396,7 @@ async fn item_events(
     let file = File {
         provider: files.provider,
         representation: files.representation,
+        originals: Some(files.original_representation),
         container: place.container,
         folder: place.folder,
         id,
@@ -407,8 +416,24 @@ async fn item_events(
     if files.container_argument == "drive" {
         arguments["drive"] = place.container.into();
     }
-    file_events(context, &file, observed_at_ms, |max_bytes| {
-        fetch_text(context, files.content, arguments, max_bytes)
+    let content_type = file.mime_type.unwrap_or("application/octet-stream");
+    file_events(context, &file, observed_at_ms, |read| async move {
+        match read {
+            Read::Text(max_bytes) => fetch_text(context, files.content, arguments, max_bytes).await,
+            Read::Original {
+                revision,
+                max_bytes,
+            } => {
+                let original = TransferFile {
+                    object_id: id,
+                    revision: &revision,
+                    filename: name,
+                    content_type,
+                    unverified_upload: None,
+                };
+                transfer_original(context, files.original, arguments, original, max_bytes).await
+            }
+        }
     })
     .await
 }

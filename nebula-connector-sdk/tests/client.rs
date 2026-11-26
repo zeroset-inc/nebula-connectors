@@ -1,4 +1,7 @@
-use nebula_connector_sdk::{Client, ClientError, client::ProviderFailureCode};
+use nebula_connector_sdk::{
+    Client, ClientError,
+    client::{ProviderFailureCode, TransferFile, Transferred},
+};
 use serde_json::json;
 use std::{
     io::Write,
@@ -50,6 +53,147 @@ async fn provider_errors_keep_status_and_backoff_without_provider_bodies() {
         _ => panic!("failure classification lost"),
     }
     server.join().unwrap();
+}
+
+const REPORT: TransferFile<'static> = TransferFile {
+    object_id: "item-1",
+    revision: "revision-1",
+    filename: "report.pdf",
+    content_type: "application/pdf",
+    unverified_upload: None,
+};
+
+/// Answers one transfer request with `status` and `reply`, and returns the
+/// client's result with the request the service received.
+async fn transfer_answered(
+    status: u16,
+    reply: &'static str,
+    max_bytes: Option<u64>,
+) -> (Result<Transferred, ClientError>, serde_json::Value) {
+    transfer_of(REPORT, status, reply, max_bytes).await
+}
+
+async fn transfer_of(
+    file: TransferFile<'static>,
+    status: u16,
+    reply: &'static str,
+    max_bytes: Option<u64>,
+) -> (Result<Transferred, ClientError>, serde_json::Value) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = thread::spawn(move || {
+        let (mut stream, _) = accept(&listener);
+        let (path, body) = request(&mut stream);
+        assert!(path.starts_with("POST ") && path.contains("/runs/run/transfers"));
+        respond(&mut stream, status, reply);
+        serde_json::from_slice::<serde_json::Value>(&body).unwrap()
+    });
+    let client = Client::new(
+        &format!("http://{address}"),
+        "workspace",
+        "collection",
+        "connection",
+        "nebula-grant",
+    )
+    .unwrap();
+    let result = client
+        .transfer(
+            &run(),
+            "attempt",
+            "items.content",
+            json!({"file":"item-1"}),
+            file,
+            max_bytes,
+        )
+        .await;
+    (result, server.join().unwrap())
+}
+
+#[tokio::test]
+async fn a_transfer_names_the_file_revision_and_returns_the_held_upload() {
+    let digest = "a".repeat(64);
+    let reply: &'static str = Box::leak(
+        format!(r#"{{"attempt_id":"attempt","upload_id":"upload-1","sha256":"{digest}","byte_length":2048}}"#)
+            .into_boxed_str(),
+    );
+    let (result, sent) = transfer_answered(200, reply, Some(4096)).await;
+    assert_eq!(
+        sent,
+        json!({"fence":1,"id":"attempt","operation":"items.content","arguments":{"file":"item-1"},
+            "object_id":"item-1","revision":"revision-1","filename":"report.pdf",
+            "content_type":"application/pdf","max_response_bytes":4096})
+    );
+    let Ok(Transferred::Held(transfer)) = result else {
+        panic!("the held upload was lost: {result:?}");
+    };
+    assert_eq!(
+        (
+            transfer.upload_id.as_str(),
+            transfer.sha256,
+            transfer.byte_length
+        ),
+        ("upload-1", digest, 2048)
+    );
+}
+
+#[tokio::test]
+async fn an_unverified_upload_is_returned_and_named_in_the_next_transfer() {
+    let unverified = r#"{"attempt_id":"attempt","upload_id":"upload-1"}"#;
+    let (result, sent) = transfer_answered(202, unverified, None).await;
+    assert!(sent.get("upload_id").is_none());
+    assert!(
+        matches!(&result, Ok(Transferred::Unverified { upload_id }) if upload_id == "upload-1"),
+        "{result:?}"
+    );
+
+    let named = TransferFile {
+        unverified_upload: Some("upload-1"),
+        ..REPORT
+    };
+    let (_, sent) = transfer_of(named, 202, unverified, None).await;
+    assert_eq!(sent["upload_id"], "upload-1");
+
+    for half in [
+        r#"{"attempt_id":"attempt","upload_id":"upload-1","byte_length":10}"#,
+        r#"{"attempt_id":"another","upload_id":"upload-1"}"#,
+        r#"{"attempt_id":"attempt","upload_id":""}"#,
+    ] {
+        let (result, _) = transfer_answered(202, half, None).await;
+        assert!(matches!(result, Err(ClientError::Response)), "{half}");
+    }
+}
+
+#[tokio::test]
+async fn a_transfer_larger_than_asked_for_or_for_another_attempt_is_refused() {
+    let reply = |attempt: &str, bytes: u64| -> &'static str {
+        Box::leak(
+            format!(
+                r#"{{"attempt_id":"{attempt}","upload_id":"upload-1","sha256":"{}","byte_length":{bytes}}}"#,
+                "a".repeat(64)
+            )
+            .into_boxed_str(),
+        )
+    };
+    for answer in [reply("attempt", 4097), reply("another", 10)] {
+        let (result, _) = transfer_answered(200, answer, Some(4096)).await;
+        assert!(matches!(result, Err(ClientError::Response)), "{answer}");
+    }
+}
+
+#[tokio::test]
+async fn a_transfer_the_provider_refuses_keeps_the_brokers_failure() {
+    let (result, _) = transfer_answered(
+        502,
+        r#"{"attempt_id":"attempt","provider_status":0,"code":"response_limit","retryable":false,"retry_after_seconds":0}"#,
+        None,
+    )
+    .await;
+    match result {
+        Err(ClientError::Provider(failure)) => {
+            assert!(matches!(failure.code, ProviderFailureCode::ResponseLimit));
+        }
+        other => panic!("failure classification lost: {other:?}"),
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

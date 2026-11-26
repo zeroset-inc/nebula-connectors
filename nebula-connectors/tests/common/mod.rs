@@ -26,13 +26,17 @@ pub struct StateData {
     requests: Vec<Value>,
     eligibility: HashMap<String, Value>,
     eligibility_requests: Vec<Value>,
+    transfers: HashMap<String, Value>,
+    transfer_requests: Vec<Value>,
     batches: Vec<Value>,
     run: Run,
     scope: Value,
 }
 
 /// A stand-in Nebula service. Each provider request takes the next reply; a
-/// reply with `provider_status` becomes the broker's provider failure.
+/// reply with `provider_status` becomes the broker's provider failure. A
+/// transfer is answered by filename, and stores a 1 KiB original unless told
+/// otherwise.
 pub struct Server {
     address: std::net::SocketAddr,
     pub state: Arc<Mutex<StateData>>,
@@ -64,6 +68,8 @@ impl Server {
             requests: vec![],
             eligibility: HashMap::new(),
             eligibility_requests: vec![],
+            transfers: HashMap::new(),
+            transfer_requests: vec![],
             batches: vec![],
             run: Run {
                 limits: nebula_connector_sdk::client::ProtocolLimits::V1,
@@ -90,6 +96,7 @@ impl Server {
                 &format!("{base}/runs/run/source-eligibility"),
                 post(eligibility),
             )
+            .route(&format!("{base}/runs/run/transfers"), post(transfer))
             .route(&format!("{base}/runs/run/batches"), post(accept))
             .with_state(state.clone());
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -143,6 +150,24 @@ impl Server {
 
     pub async fn eligibility_requests(&self) -> Vec<Value> {
         self.state.lock().await.eligibility_requests.clone()
+    }
+
+    /// Answers the transfer of `filename` with `reply`: a `status` is the
+    /// service's refusal, with its `retry_after` seconds if given, a
+    /// `provider_status` the broker's provider failure, an `unverified`
+    /// upload the engine has not verified, and a `byte_length` the size of
+    /// the stored original. A list answers one request each, the last one
+    /// every request after it.
+    pub async fn transfer_for(&self, filename: &str, reply: Value) {
+        self.state
+            .lock()
+            .await
+            .transfers
+            .insert(filename.into(), reply);
+    }
+
+    pub async fn transfer_requests(&self) -> Vec<Value> {
+        self.state.lock().await.transfer_requests.clone()
     }
 
     pub async fn provider_requests(&self) -> Vec<Value> {
@@ -215,6 +240,51 @@ async fn provider(
         json!({"attempt_id":request["id"],"status":200,"sha256":"0".repeat(64),
         "byte_length":serde_json::to_vec(&body).unwrap().len(),"body":body}),
     )
+    .into_response()
+}
+
+async fn transfer(
+    State(state): State<Arc<Mutex<StateData>>>,
+    Json(request): Json<Value>,
+) -> axum::response::Response {
+    let mut state = state.lock().await;
+    state.transfer_requests.push(request.clone());
+    let reply = match state
+        .transfers
+        .get_mut(request["filename"].as_str().unwrap())
+    {
+        Some(Value::Array(replies)) if replies.len() > 1 => replies.remove(0),
+        Some(Value::Array(replies)) => replies.first().cloned().unwrap_or_default(),
+        Some(reply) => reply.clone(),
+        None => Value::Null,
+    };
+    if let Some(status) = reply["status"].as_u64() {
+        let status = StatusCode::from_u16(status as u16).unwrap();
+        return match reply["retry_after"].as_u64() {
+            Some(seconds) => (status, [("retry-after", seconds.to_string())]).into_response(),
+            None => status.into_response(),
+        };
+    }
+    if let Some(upload) = reply["unverified"].as_str() {
+        return (
+            StatusCode::ACCEPTED,
+            Json(json!({"attempt_id":request["id"],"upload_id":upload})),
+        )
+            .into_response();
+    }
+    if let Some(status) = reply["provider_status"].as_u64() {
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(
+                json!({"attempt_id":request["id"],"provider_status":status,"code":reply["code"],
+                "retryable":false,"retry_after_seconds":0}),
+            ),
+        )
+            .into_response();
+    }
+    Json(json!({"attempt_id":request["id"],
+        "upload_id":format!("upload-{}", request["object_id"].as_str().unwrap()),
+        "sha256":"a".repeat(64),"byte_length":reply["byte_length"].as_u64().unwrap_or(1024)}))
     .into_response()
 }
 
