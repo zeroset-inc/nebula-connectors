@@ -50,6 +50,10 @@ pub(crate) async fn check_account(context: &Context) -> Result<()> {
     Ok(())
 }
 
+/// Longest page token a listing takes back: what the catalogs' runner
+/// operations allow as their `skiptoken` argument.
+pub(crate) const MAX_PAGE_TOKEN: usize = 4000;
+
 /// The page token in a Graph next link, as "skiptoken=…" or "skip=…". The
 /// broker cannot follow the link itself, so the token returns as an argument.
 pub(crate) fn next_page(response: &Value) -> Result<Option<Value>> {
@@ -66,7 +70,7 @@ pub(crate) fn next_page(response: &Value) -> Result<Option<Value>> {
         let key = percent_decode(key)?;
         if let Some(name @ ("skiptoken" | "skip")) = key.strip_prefix('$') {
             let value = percent_decode(value)?;
-            if value.is_empty() || value.len() > 4000 {
+            if value.is_empty() || value.len() > MAX_PAGE_TOKEN {
                 return Err(ConnectorError::IncompleteInventory);
             }
             return Ok(Some(format!("{name}={value}").into()));

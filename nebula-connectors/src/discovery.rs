@@ -183,7 +183,8 @@ fn execute(provider: &str, input: &Request) -> Result<(Option<Operation>, Option
         }
         encoded
     };
-    let continue_scan = slack::continue_scan(provider, input, items.len(), &cursor);
+    let continue_scan = slack::continue_scan(provider, input, items.len(), &cursor)
+        || microsoft::continue_scan(provider, input, &next, &cursor);
     Ok((
         None,
         Some(Page {

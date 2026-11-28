@@ -226,6 +226,7 @@ async fn entry_events(
         provider: "dropbox",
         representation: REPRESENTATION,
         container: folder,
+        folder: "",
         id,
         name,
         mime_type: None,
