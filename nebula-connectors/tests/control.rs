@@ -1,5 +1,5 @@
 use std::{
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader},
     net::SocketAddr,
     path::PathBuf,
     process::{Child, Command, Stdio},
@@ -138,14 +138,7 @@ async fn control_executable_reports_its_ephemeral_address_and_bind_failure() {
     .await
     .expect("contender exits on bind failure");
     assert_eq!(status.code(), Some(1));
-    let mut error = String::new();
-    contender
-        .0
-        .stderr
-        .take()
-        .unwrap()
-        .read_to_string(&mut error)
-        .unwrap();
+    let error = std::io::read_to_string(contender.0.stderr.take().unwrap()).unwrap();
     assert_eq!(error.trim_end(), "connector_control_bind_failed");
 }
 
