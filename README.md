@@ -237,6 +237,11 @@ Set `CONNECTOR_CONTROL_CREDENTIALS_FILE` to a private JSON file containing
 `{"tokens":["<32–512 character workload token>"]}`. Two tokens support rotation.
 `CONNECTOR_CONTROL_LISTEN` defaults to `127.0.0.1:8092`; terminate TLS at workload
 ingress. The endpoint is `POST /v1/providers/{provider}/webhook/verify`.
+
+When configured with port `0`, the process prints `connector_control_listening <address>`
+to stdout after binding. Use `/healthz` to check it is serving. A failed bind
+prints `connector_control_bind_failed` to stderr and exits with status 1.
+
 Each provider has eight admission permits and two verification threads. RPCs have
 a two-second deadline, 1 MiB input and 512 KiB callback bounds. Up to 128 HTTP/1
 connections each serve one RPC and expire after five seconds; shutdown drains for
