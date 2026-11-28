@@ -1,4 +1,10 @@
-use std::time::Duration;
+use std::{
+    io::{BufRead, BufReader, Read},
+    net::SocketAddr,
+    path::PathBuf,
+    process::{Child, Command, Stdio},
+    time::Duration,
+};
 
 use nebula_connectors::control::{Credentials, Runtime};
 use serde_json::{Value, json};
@@ -54,6 +60,93 @@ fn http() -> reqwest::Client {
         .timeout(Duration::from_secs(4))
         .build()
         .unwrap()
+}
+
+struct ControlCredentials(PathBuf);
+
+impl Drop for ControlCredentials {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+struct ControlProcess(Child);
+
+impl Drop for ControlProcess {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+#[tokio::test]
+#[allow(
+    clippy::disallowed_methods,
+    reason = "Local HTTP check of the address reported by the control executable"
+)]
+async fn control_executable_reports_its_ephemeral_address_and_bind_failure() {
+    let credentials = ControlCredentials(
+        std::env::temp_dir().join(format!("control-credentials-{}.json", uuid::Uuid::new_v4())),
+    );
+    std::fs::write(&credentials.0, json!({"tokens": [TOKEN]}).to_string()).unwrap();
+    let start = |address: &str| {
+        ControlProcess(
+            Command::new(env!("CARGO_BIN_EXE_nebula-connector-control"))
+                .env("CONNECTOR_CONTROL_CREDENTIALS_FILE", &credentials.0)
+                .env("CONNECTOR_CONTROL_LISTEN", address)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .unwrap(),
+        )
+    };
+    let mut server = start("127.0.0.1:0");
+    let stdout = server.0.stdout.take().unwrap();
+    let announcement = tokio::task::spawn_blocking(move || {
+        let mut line = String::new();
+        BufReader::new(stdout).read_line(&mut line).unwrap();
+        line
+    });
+    let line = tokio::time::timeout(Duration::from_secs(5), announcement)
+        .await
+        .expect("control reports its bound address")
+        .unwrap();
+    let address: SocketAddr = line
+        .trim_end()
+        .strip_prefix("connector_control_listening ")
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert!(address.ip().is_loopback());
+    assert_ne!(address.port(), 0);
+    let health = http()
+        .get(format!("http://{address}/healthz"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(health.status(), 204);
+
+    let mut contender = start(&address.to_string());
+    let status = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(status) = contender.0.try_wait().unwrap() {
+                break status;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("contender exits on bind failure");
+    assert_eq!(status.code(), Some(1));
+    let mut error = String::new();
+    contender
+        .0
+        .stderr
+        .take()
+        .unwrap()
+        .read_to_string(&mut error)
+        .unwrap();
+    assert_eq!(error.trim_end(), "connector_control_bind_failed");
 }
 
 #[tokio::test]
