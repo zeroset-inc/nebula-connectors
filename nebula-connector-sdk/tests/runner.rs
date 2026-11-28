@@ -449,9 +449,10 @@ async fn temporary_renewal_overload_does_not_restart_the_provider_page() {
 #[tokio::test]
 async fn adapter_failures_are_reported_without_masking_the_original_error() {
     for (point, code, status) in [
-        (FailurePoint::Check, "provider_permission_denied", 200),
-        (FailurePoint::Read, "provider_response_invalid", 200),
-        (FailurePoint::Read, "provider_response_invalid", 404),
+        (FailurePoint::Check, "provider_permission_denied", Some(200)),
+        (FailurePoint::Read, "provider_response_invalid", Some(200)),
+        (FailurePoint::Read, "provider_response_invalid", Some(404)),
+        (FailurePoint::Read, "provider_response_invalid", None),
     ] {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let client = client(&listener);
@@ -461,6 +462,7 @@ async fn adapter_failures_are_reported_without_masking_the_original_error() {
             block: None,
             invalid: false,
         };
+        let (finished, report_finished) = std::sync::mpsc::channel::<()>();
         let server = thread::spawn(move || {
             respond_start(&listener, &run());
             let (mut stream, _) = accept(&listener);
@@ -471,23 +473,22 @@ async fn adapter_failures_are_reported_without_masking_the_original_error() {
                 serde_json::from_slice::<Value>(&body).unwrap(),
                 json!({"fence":1,"code":code})
             );
-            respond(
-                &mut stream,
-                status,
-                if status == 200 {
-                    r#"{"state":"expired"}"#
-                } else {
-                    r#"{"code":"not_found"}"#
-                },
-            );
+            match status {
+                Some(200) => respond(&mut stream, 200, r#"{"state":"expired"}"#),
+                Some(status) => respond(&mut stream, status, r#"{"code":"not_found"}"#),
+                None => {
+                    let _ = report_finished.recv_timeout(Duration::from_secs(12));
+                }
+            }
         });
         let result = tokio::time::timeout(
-            Duration::from_secs(5),
+            Duration::from_secs(10),
             runner::run(&reader, client, "run", "scan", true),
         )
-        .await
-        .unwrap();
+        .await;
+        drop(finished);
         server.join().unwrap();
+        let result = result.expect("the report must not delay the original error");
         match point {
             FailurePoint::Check => assert!(matches!(
                 result,

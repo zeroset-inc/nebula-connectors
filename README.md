@@ -63,9 +63,9 @@ incremental completion cannot authorize absence reconciliation.
 An adapter error is reported to `POST …/runs/{run}/fail` as `{fence, code}`.
 Only the fixed `ConnectorError` codes are sent; provider bodies and credentials
 are never included. The service owns retry timing and keeps the accepted cursor.
-A failed report preserves the original adapter error; services without this
-endpoint recover through lease expiry. Cancellation and ownership loss do not
-report an adapter failure.
+Reporting takes at most five seconds within the run deadline and preserves the
+original adapter error. Services without this endpoint recover through lease
+expiry. Cancellation and ownership loss do not report an adapter failure.
 
 Runner component tests use the real HTTP SDK with stub adapters/service responses
 to cover lost replies, renewal overload/fencing, completion races and restart.

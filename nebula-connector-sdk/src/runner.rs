@@ -12,6 +12,7 @@ use crate::{
 
 const MAX_PAGES: usize = 10_000;
 const MAX_RUN_TIME: Duration = Duration::from_secs(3600);
+const FAILURE_REPORT_TIMEOUT: Duration = Duration::from_secs(5);
 const LEASE_MARGIN: Duration = Duration::from_secs(1);
 
 #[derive(Debug, thiserror::Error)]
@@ -107,16 +108,21 @@ pub async fn run(
         )
         .await
     };
+    let run_deadline = Instant::now() + MAX_RUN_TIME;
     let result = tokio::select! {
         biased;
         result = execute => result,
         result = renewal => result,
-        _ = tokio::time::sleep(MAX_RUN_TIME) => Err(Error::Limit),
+        _ = tokio::time::sleep_until(run_deadline) => Err(Error::Limit),
     };
-    if let Err(Error::Connector(failure)) = &result {
+    let now = Instant::now();
+    if let Err(Error::Connector(failure)) = &result
+        && now < run_deadline
+    {
         // Older services have no failure route; preserve the provider error and
         // let lease expiry recover ownership if reporting is unavailable.
-        let _ = service.fail(&context.run, failure).await;
+        let deadline = run_deadline.min(now + FAILURE_REPORT_TIMEOUT);
+        let _ = tokio::time::timeout_at(deadline, service.fail(&context.run, failure)).await;
     }
     result
 }
