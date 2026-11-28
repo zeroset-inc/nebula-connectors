@@ -17,7 +17,14 @@ use serde_json::{Value, json};
 mod support;
 use support::{accept, request, respond, run};
 
+#[derive(Clone, Copy)]
+enum FailurePoint {
+    Check,
+    Read,
+}
+
 struct Reader {
+    failure: Option<FailurePoint>,
     cursors: Arc<Mutex<Vec<(bool, Value)>>>,
     block: Option<Arc<tokio::sync::Notify>>,
     invalid: bool,
@@ -42,6 +49,9 @@ impl Connector for Reader {
         }
     }
     async fn check(&self, context: &Context) -> Result<(), ConnectorError> {
+        if matches!(self.failure, Some(FailurePoint::Check)) {
+            return Err(ConnectorError::Permission);
+        }
         assert_eq!(context.authority, "account");
         assert_eq!(context.scope.containers(), ["folder"]);
         assert_eq!(context.config, json!({"setting":true}));
@@ -55,6 +65,9 @@ impl Connector for Reader {
         unreachable!()
     }
     async fn read(&self, context: &Context, cursor: &Value) -> Result<Page, ConnectorError> {
+        if matches!(self.failure, Some(FailurePoint::Read)) {
+            return Err(ConnectorError::Response);
+        }
         self.cursors
             .lock()
             .unwrap()
@@ -116,6 +129,7 @@ async fn invalid_scope_stops_before_run_admission_and_provider_work() {
         let service = client(&listener);
         let seen = Arc::new(Mutex::new(Vec::new()));
         let reader = Reader {
+            failure: None,
             cursors: seen.clone(),
             block: None,
             invalid: false,
@@ -146,6 +160,7 @@ async fn lost_acceptance_reply_replays_identical_batch_and_seals_after_events() 
     let client = client(&listener);
     let seen = Arc::new(Mutex::new(Vec::new()));
     let reader = Reader {
+        failure: None,
         cursors: seen.clone(),
         block: None,
         invalid: false,
@@ -207,6 +222,7 @@ async fn incremental_completion_does_not_emit_an_inventory_seal_and_restart_does
     let client = client(&listener);
     let seen = Arc::new(Mutex::new(Vec::new()));
     let reader = Reader {
+        failure: None,
         cursors: seen.clone(),
         block: None,
         invalid: false,
@@ -254,6 +270,7 @@ async fn lease_renewal_runs_during_blocked_provider_read_and_fencing_cancels_it(
     let client = client(&listener);
     let seen = Arc::new(Mutex::new(Vec::new()));
     let reader = Reader {
+        failure: None,
         cursors: seen.clone(),
         block: Some(Arc::new(tokio::sync::Notify::new())),
         invalid: false,
@@ -292,6 +309,7 @@ async fn mismatched_cursor_version_stops_before_provider_work() {
     let client = client(&listener);
     let seen = Arc::new(Mutex::new(Vec::new()));
     let reader = Reader {
+        failure: None,
         cursors: seen.clone(),
         block: None,
         invalid: false,
@@ -312,6 +330,7 @@ async fn adapter_cannot_inject_checkpoint_or_inventory_completion() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let client = client(&listener);
     let reader = Reader {
+        failure: None,
         cursors: Arc::new(Mutex::new(Vec::new())),
         block: None,
         invalid: true,
@@ -328,6 +347,7 @@ async fn final_commit_reconciles_when_renewal_races_a_lost_response() {
     let client = client(&listener);
     let seen = Arc::new(Mutex::new(Vec::new()));
     let reader = Reader {
+        failure: None,
         cursors: seen.clone(),
         block: None,
         invalid: false,
@@ -382,6 +402,7 @@ async fn temporary_renewal_overload_does_not_restart_the_provider_page() {
     let seen = Arc::new(Mutex::new(Vec::new()));
     let unblock = Arc::new(tokio::sync::Notify::new());
     let reader = Reader {
+        failure: None,
         cursors: seen.clone(),
         block: Some(unblock.clone()),
         invalid: false,
@@ -423,4 +444,60 @@ async fn temporary_renewal_overload_does_not_restart_the_provider_page() {
     server.join().unwrap();
     assert_eq!(result.state, "sealed");
     assert_eq!(seen.lock().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn adapter_failures_are_reported_without_masking_the_original_error() {
+    for (point, code, status) in [
+        (FailurePoint::Check, "provider_permission_denied", Some(200)),
+        (FailurePoint::Read, "provider_response_invalid", Some(200)),
+        (FailurePoint::Read, "provider_response_invalid", Some(404)),
+        (FailurePoint::Read, "provider_response_invalid", None),
+    ] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let client = client(&listener);
+        let reader = Reader {
+            failure: Some(point),
+            cursors: Arc::new(Mutex::new(Vec::new())),
+            block: None,
+            invalid: false,
+        };
+        let (finished, report_finished) = std::sync::mpsc::channel::<()>();
+        let server = thread::spawn(move || {
+            respond_start(&listener, &run());
+            let (mut stream, _) = accept(&listener);
+            let (path, body) = request(&mut stream);
+            assert!(path.starts_with("POST "));
+            assert!(path.contains("/runs/run/fail "));
+            assert_eq!(
+                serde_json::from_slice::<Value>(&body).unwrap(),
+                json!({"fence":1,"code":code})
+            );
+            match status {
+                Some(200) => respond(&mut stream, 200, r#"{"state":"expired"}"#),
+                Some(status) => respond(&mut stream, status, r#"{"code":"not_found"}"#),
+                None => {
+                    let _ = report_finished.recv_timeout(Duration::from_secs(12));
+                }
+            }
+        });
+        let result = tokio::time::timeout(
+            Duration::from_secs(10),
+            runner::run(&reader, client, "run", "scan", true),
+        )
+        .await;
+        drop(finished);
+        server.join().unwrap();
+        let result = result.expect("the report must not delay the original error");
+        match point {
+            FailurePoint::Check => assert!(matches!(
+                result,
+                Err(runner::Error::Connector(ConnectorError::Permission))
+            )),
+            FailurePoint::Read => assert!(matches!(
+                result,
+                Err(runner::Error::Connector(ConnectorError::Response))
+            )),
+        }
+    }
 }

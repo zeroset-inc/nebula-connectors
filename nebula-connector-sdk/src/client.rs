@@ -313,6 +313,43 @@ impl Client {
         Ok(lease)
     }
 
+    /// Report an adapter failure without advancing its accepted checkpoint.
+    pub async fn fail(
+        &self,
+        run: &Run,
+        failure: &crate::ConnectorError,
+    ) -> Result<(), ClientError> {
+        use crate::ConnectorError;
+        let code = match failure {
+            ConnectorError::Configuration => "provider_configuration_invalid",
+            ConnectorError::Permission => "provider_permission_denied",
+            ConnectorError::Response => "provider_response_invalid",
+            ConnectorError::CursorExpired => "provider_cursor_expired",
+            ConnectorError::IncompleteInventory => "provider_inventory_incomplete",
+            ConnectorError::Transport(_) => "connector_transport_failed",
+        };
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Failed {
+            state: String,
+        }
+        let result: Failed = self
+            .send(
+                Method::POST,
+                &["runs", &run.id, "fail"],
+                Some(
+                    serde_json::to_vec(&json!({"fence":run.fence,"code":code}))
+                        .map_err(|_| ClientError::Configuration)?,
+                ),
+                4096,
+            )
+            .await?;
+        if result.state != "expired" {
+            return Err(ClientError::Response);
+        }
+        Ok(())
+    }
+
     pub async fn complete(&self, run: &Run) -> Result<(), ClientError> {
         #[derive(Deserialize)]
         #[serde(deny_unknown_fields)]
